@@ -1,19 +1,31 @@
-# main.py
-
 import time
 from PIL import Image, ImageDraw, ImageFont
-from modules.setup import setup_hardware
-import copy
+from adafruit_rgb_display import st7789
+from digitalio import DigitalInOut, Direction, Pull
+import board
+import copy  # For deep copy
 
-# Setup the hardware (display, backlight, buttons)
-hardware = setup_hardware()
-disp = hardware["display"]
-backlight = hardware["backlight"]
-buttons = hardware["buttons"]
+# Initialize the display
+cs_pin = DigitalInOut(board.CE0)
+dc_pin = DigitalInOut(board.D25)
+reset_pin = DigitalInOut(board.D24)
+BAUDRATE = 24000000
 
-# 240x240 blank canvas
-width = disp.width
-height = disp.height
+spi = board.SPI()
+disp = st7789.ST7789(
+    spi,
+    height=240,
+    y_offset=80,
+    rotation=180,  # Display is rotated by 180 degrees
+    cs=cs_pin,
+    dc=dc_pin,
+    rst=reset_pin,
+    baudrate=BAUDRATE,
+)
+
+# Create blank image for drawing
+width = disp.width  # Should be 240
+height = disp.height  # Should be 240
 image = Image.new("RGB", (width, height))
 
 # Get drawing object to draw on image
@@ -37,6 +49,28 @@ directions = {
     "up": (1, 0),     # Up moves up in array indices
     "down": (-1, 0),    # Down moves down in array indices
 }
+
+# Turn on the Backlight
+backlight = DigitalInOut(board.D26)
+backlight.switch_to_output()
+backlight.value = True
+
+# Setup Joystick input pins
+button_L = DigitalInOut(board.D27)
+button_L.direction = Direction.INPUT
+button_L.pull = Pull.UP
+
+button_R = DigitalInOut(board.D23)
+button_R.direction = Direction.INPUT
+button_R.pull = Pull.UP
+
+button_U = DigitalInOut(board.D17)
+button_U.direction = Direction.INPUT
+button_U.pull = Pull.UP
+
+button_D = DigitalInOut(board.D22)
+button_D.direction = Direction.INPUT
+button_D.pull = Pull.UP
 
 # Animation queue to store intermediate states for smooth movement
 animation_queue = []
@@ -134,34 +168,30 @@ def slide_blocks(direction):
     return moved
 
 # Main game loop
-def main():
-    while True:
-        direction_pressed = None
+while True:
+    direction_pressed = None
 
-        # Check Joystick input (adjusted for rotation)
-        if not buttons["L"].value:  # Left button pressed
-            direction_pressed = "right"  # Due to rotation, left button moves right in array
-        elif not buttons["R"].value:  # Right button pressed
-            direction_pressed = "left"
-        elif not buttons["U"].value:  # Up button pressed
-            direction_pressed = "down"
-        elif not buttons["D"].value:  # Down button pressed
-            direction_pressed = "up"
+    # Check Joystick input (adjusted for rotation)
+    if not button_L.value:  # Left button pressed
+        direction_pressed = "right"  # Due to rotation, left button moves right in array
+    elif not button_R.value:  # Right button pressed
+        direction_pressed = "left"
+    elif not button_U.value:  # Up button pressed
+        direction_pressed = "down"
+    elif not button_D.value:  # Down button pressed
+        direction_pressed = "up"
 
-        # Slide blocks if a direction button was pressed and no ongoing animation
-        if direction_pressed and not animation_queue:
-            if slide_blocks(direction_pressed):
-                pass  # Additional logic can be added here
+    # Slide blocks if a direction button was pressed and no ongoing animation
+    if direction_pressed and not animation_queue:
+        if slide_blocks(direction_pressed):
+            pass  # Additional logic can be added here
 
-        # Handle animation
-        if animation_queue:
-            blocks = animation_queue.pop(0)
-            draw_grid()
-            time.sleep(0.1)  # Run the animation.
-        else:
-            draw_grid()  # Grid update.
+    # Handle animation
+    if animation_queue:
+        blocks = animation_queue.pop(0)
+        draw_grid()
+        time.sleep(0.1)  # Control animation speed
+    else:
+        draw_grid()  # Ensure the grid is redrawn
 
-        time.sleep(0.01)  # Gives a short delay to avoid multi-input
-
-if __name__ == "__main__":
-    main()
+    time.sleep(0.01)  # Small delay to avoid rapid movement
