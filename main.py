@@ -1,7 +1,8 @@
 # main.py
 
 import time
-import copy  # For deep copy
+import copy
+import random
 from PIL import ImageFont
 import setup  # Import the setup module we just created
 
@@ -21,6 +22,12 @@ TILE_THICKNESS = 4  # Thickness of the grid lines
 TILE_SIZE = (
     disp.width - (GRID_SIZE + 1) * TILE_THICKNESS
 ) // GRID_SIZE  # Size of each tile including space for lines
+
+# Modulo Game Configuration
+MODULO_Y = None  # The modulo base
+MODULO_N = None  # The N-th number we're looking for
+MAX_MODULO_BASE = 20  # Maximum modulo base
+MAX_BLOCK_VALUE = 2048  # Maximum block value
 
 # Initialize block positions
 blocks = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]  # Empty grid
@@ -43,7 +50,74 @@ FONT_SIZE = 24
 font = ImageFont.truetype(FONT_PATH, FONT_SIZE)
 
 # -----------------------------
-# Function Definitions
+# Modulo Game Mechanics Functions
+# -----------------------------
+
+def roll_modulo_parameters():
+    """
+    Randomly determine the modulo parameters at game start.
+    """
+    global MODULO_Y, MODULO_N
+    
+    # Randomly choose the modulo base between 5 and MAX_MODULO_BASE
+    MODULO_Y = random.randint(5, MAX_MODULO_BASE)
+    
+    # Randomly choose N (which number in the sequence we want)
+    MODULO_N = random.randint(1, 10)
+    
+    print(f"Game Modulo Rules: {MODULO_N}-th number satisfying x = z (mod {MODULO_Y})")
+    return MODULO_Y, MODULO_N
+
+def find_nth_modulo_number(x, y, n):
+    """
+    Find the N-th number Z that satisfies X = Z (mod Y)
+    
+    Args:
+    x (int): The current block's value
+    y (int): The modulo base
+    n (int): Which occurrence of a matching number we want
+    
+    Returns:
+    int: The N-th number satisfying the modulo condition
+    """
+    if y <= 0:
+        raise ValueError("Modulo base must be positive")
+    
+    candidates = []
+    z = x  # Start from x itself
+    
+    # Find first n numbers that satisfy the modulo condition
+    while len(candidates) < n:
+        if z % y == x % y:
+            candidates.append(z)
+        z += 1
+        
+        # Prevent infinite loops or extremely large numbers
+        if z > MAX_BLOCK_VALUE:
+            break
+    
+    # Return the nth number found, or the last candidate
+    return candidates[n-1] if len(candidates) >= n else candidates[-1]
+
+def merge_with_modulo_rule(x, y):
+    """
+    Merge two blocks according to the modulo game rules.
+    
+    Args:
+    x (int): Value of the first block
+    y (int): Value of the block being merged
+    
+    Returns:
+    int: The merged block value
+    """
+    if MODULO_Y is None or MODULO_N is None:
+        return x + y  # Fallback to standard 2048 rule
+    
+    merged_value = find_nth_modulo_number(x, MODULO_Y, MODULO_N)
+    return merged_value
+
+# -----------------------------
+# Existing Game Functions
 # -----------------------------
 
 def draw_grid():
@@ -81,8 +155,10 @@ def draw_grid():
                     fill=block_color
                 )
 
-                # Draw the block value centered within the block
+                # Draw the block value and modulo parameters (if set)
                 text = str(blocks[row][col])
+                if MODULO_Y and MODULO_N:
+                    text += f"\n(mod {MODULO_Y}, {MODULO_N})"
 
                 # Calculate text size and position
                 text_bbox = draw.textbbox((0, 0), text, font=font)
@@ -100,11 +176,7 @@ def draw_grid():
 
 def slide_blocks(direction):
     """
-    Slides the blocks in the given direction with animation.
-    Args:
-        direction (str): The direction in which to slide the blocks ('left', 'right', 'up', 'down').
-    Returns:
-        bool: True if any block moved, False otherwise.
+    Modified slide_blocks to incorporate modulo merging.
     """
     global blocks, animation_queue
     row_offset, col_offset = DIRECTIONS[direction]
@@ -114,21 +186,32 @@ def slide_blocks(direction):
     for _ in range(GRID_SIZE - 1):
         any_block_moved = False
         new_blocks = copy.deepcopy(blocks)
+        
         for row in range(GRID_SIZE):
             for col in range(GRID_SIZE):
                 next_row = row + row_offset
                 next_col = col + col_offset
-                if (
-                    0 <= next_row < GRID_SIZE
-                    and 0 <= next_col < GRID_SIZE
-                    and blocks[row][col] != 0
-                    and blocks[next_row][next_col] == 0
-                ):
-                    # Move block one step in the direction
-                    new_blocks[next_row][next_col] = blocks[row][col]
-                    new_blocks[row][col] = 0
-                    moved = True
-                    any_block_moved = True
+                
+                if (0 <= next_row < GRID_SIZE and 0 <= next_col < GRID_SIZE):
+                    # Merge condition
+                    if (blocks[row][col] != 0 and blocks[next_row][next_col] != 0 
+                        and blocks[row][col] == blocks[next_row][next_col]):
+                        # Use modulo merge rule
+                        new_blocks[next_row][next_col] = merge_with_modulo_rule(
+                            blocks[row][col], 
+                            blocks[next_row][next_col]
+                        )
+                        new_blocks[row][col] = 0
+                        moved = True
+                        any_block_moved = True
+                    
+                    # Movement condition (similar to original)
+                    elif (blocks[row][col] != 0 and blocks[next_row][next_col] == 0):
+                        new_blocks[next_row][next_col] = blocks[row][col]
+                        new_blocks[row][col] = 0
+                        moved = True
+                        any_block_moved = True
+        
         if any_block_moved:
             blocks = new_blocks
             animation_queue.append(copy.deepcopy(blocks))
@@ -162,6 +245,9 @@ def main():
     """
     The main game loop.
     """
+    # Roll modulo parameters at game start
+    roll_modulo_parameters()
+    
     while True:
         # Check for joystick input
         direction_pressed = get_direction_pressed()
