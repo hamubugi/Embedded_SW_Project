@@ -35,14 +35,6 @@ SPAWN_CHANCE = 1.0  # 100% chance of spawning new blocks after each move
 # Initialize block positions
 blocks = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]  # Empty grid
 
-# Adjusted directions due to display rotation
-DIRECTIONS = {
-    "left": (0, -1),    # Move left in array indices
-    "right": (0, 1),    # Move right in array indices
-    "up": (-1, 0),      # Move up in array indices
-    "down": (1, 0),     # Move down in array indices
-}
-
 # Animation queue to store intermediate states for smooth movement
 animation_queue = []
 
@@ -127,9 +119,13 @@ def is_modulo_block(value):
 def merge_blocks(block1, block2):
     """
     Determine how blocks merge based on their types.
+    Blocks only merge if they are equal in value.
     If either block is a modulo block, use modulo merging rules.
     Otherwise, use normal merging rules.
     """
+    if block1 != block2:
+        return None  # Blocks must be equal to merge
+
     if MODULO_Y and MODULO_N:
         if is_modulo_block(block1) or is_modulo_block(block2):
             # Use modulo merging rules
@@ -173,9 +169,9 @@ def draw_grid():
         for col in range(GRID_SIZE):
             value = blocks[row][col]
             if value != 0:
-                # Adjust coordinates for rotation
-                display_row = row  # Row index remains the same
-                display_col = col  # Adjusted column index (no inversion)
+                # No inversion of columns or rows
+                display_row = row
+                display_col = col
 
                 x_pos = display_col * (TILE_SIZE + TILE_THICKNESS) + TILE_THICKNESS
                 y_pos = display_row * (TILE_SIZE + TILE_THICKNESS) + TILE_THICKNESS
@@ -215,69 +211,52 @@ def slide_blocks(direction):
     Slides the blocks in the given direction, handles merging, and spawns new blocks if any block moved.
     """
     moved = False
-    merged_positions = set()
-
     new_blocks = copy.deepcopy(blocks)
-    row_offset, col_offset = DIRECTIONS[direction]
 
-    # Set up traversal order based on direction
+    def move_and_merge_line(line):
+        nonlocal moved
+        new_line = [value for value in line if value != 0]
+        i = 0
+        while i < len(new_line) - 1:
+            current_value = new_line[i]
+            next_value = new_line[i + 1]
+            if current_value == next_value:
+                merged_value = merge_blocks(current_value, next_value)
+                new_line[i] = merged_value
+                del new_line[i + 1]
+                moved = True
+            i += 1
+        new_line += [0] * (GRID_SIZE - len(new_line))
+        return new_line
+
     if direction == "up":
-        range_rows = range(1, GRID_SIZE)
-        range_cols = range(GRID_SIZE)
-        row_step = -1
-        col_step = 0
+        for col in range(GRID_SIZE):
+            line = [blocks[row][col] for row in range(GRID_SIZE)]
+            new_line = move_and_merge_line(line)
+            for row in range(GRID_SIZE):
+                new_blocks[row][col] = new_line[row]
+
     elif direction == "down":
-        range_rows = range(GRID_SIZE - 2, -1, -1)
-        range_cols = range(GRID_SIZE)
-        row_step = 1
-        col_step = 0
+        for col in range(GRID_SIZE):
+            line = [blocks[row][col] for row in range(GRID_SIZE - 1, -1, -1)]
+            new_line = move_and_merge_line(line)
+            for idx, row in enumerate(range(GRID_SIZE - 1, -1, -1)):
+                new_blocks[row][col] = new_line[idx]
+
     elif direction == "left":
-        range_rows = range(GRID_SIZE)
-        range_cols = range(1, GRID_SIZE)
-        row_step = 0
-        col_step = -1
+        for row in range(GRID_SIZE):
+            line = blocks[row]
+            new_line = move_and_merge_line(line)
+            new_blocks[row] = new_line
+
     elif direction == "right":
-        range_rows = range(GRID_SIZE)
-        range_cols = range(GRID_SIZE - 2, -1, -1)
-        row_step = 0
-        col_step = 1
+        for row in range(GRID_SIZE):
+            line = blocks[row][::-1]
+            new_line = move_and_merge_line(line)
+            new_blocks[row] = new_line[::-1]
 
-    for row in range_rows:
-        for col in range_cols:
-            current_value = new_blocks[row][col]
-            if current_value == 0:
-                continue
-            current_row, current_col = row, col
-            while True:
-                next_row = current_row + row_step
-                next_col = current_col + col_step
-                if 0 <= next_row < GRID_SIZE and 0 <= next_col < GRID_SIZE:
-                    next_value = new_blocks[next_row][next_col]
-                    if next_value == 0:
-                        # Move block
-                        new_blocks[next_row][next_col] = new_blocks[current_row][current_col]
-                        new_blocks[current_row][current_col] = 0
-                        moved = True
-                        print(f"Block moved from ({current_row},{current_col}) to ({next_row},{next_col})")
-                        current_row, current_col = next_row, next_col
-                    elif (next_row, next_col) not in merged_positions:
-                        merged_value = merge_blocks(new_blocks[current_row][current_col], next_value)
-                        if merged_value:
-                            # Merge blocks
-                            new_blocks[next_row][next_col] = merged_value
-                            new_blocks[current_row][current_col] = 0
-                            merged_positions.add((next_row, next_col))
-                            moved = True
-                            print(f"Blocks at ({current_row},{current_col}) and ({next_row},{next_col}) merged into {merged_value}")
-                        else:
-                            print(f"Blocks at ({current_row},{current_col}) and ({next_row},{next_col}) cannot merge")
-                        break
-                    else:
-                        break
-                else:
-                    break
-
-    if moved:
+    if new_blocks != blocks:
+        moved = True
         blocks[:] = new_blocks
         animation_queue.append(copy.deepcopy(blocks))
         spawn_new_blocks()
@@ -314,11 +293,11 @@ def check_game_over():
                 return False  # Empty cell exists
             # Check right neighbor
             if col < GRID_SIZE - 1:
-                if merge_blocks(blocks[row][col], blocks[row][col + 1]) is not None:
+                if blocks[row][col] == blocks[row][col + 1]:
                     return False  # Merge is possible
             # Check down neighbor
             if row < GRID_SIZE - 1:
-                if merge_blocks(blocks[row][col], blocks[row + 1][col]) is not None:
+                if blocks[row][col] == blocks[row + 1][col]:
                     return False  # Merge is possible
     return True  # No moves left
 
@@ -353,7 +332,7 @@ def main():
                         if is_modulo_block(blocks[row][col]):
                             print(f"Modulo block at ({row},{col}) with value {blocks[row][col]}")
             else:
-                pass
+                print("No blocks moved or merged")
 
             if check_game_over():
                 print("Game Over!")
