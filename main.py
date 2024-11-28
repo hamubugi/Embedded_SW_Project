@@ -29,9 +29,12 @@ MODULO_N = None  # The N-th number we're looking for
 MAX_MODULO_BASE = 20  # Maximum modulo base
 MAX_BLOCK_VALUE = 2048  # Maximum block value
 
+# Spawn Mechanics
+SPAWN_CHANCE = 0.2  # 20% chance of spawning a new block after each move
+MODULO_BLOCK_CHANCE = 0.1  # 10% chance of spawning a modulo block
+
 # Initialize block positions
 blocks = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]  # Empty grid
-blocks[3][3] = 2  # Start block at position (3,3)
 
 # Adjusted directions due to display rotation
 DIRECTIONS = {
@@ -71,14 +74,6 @@ def roll_modulo_parameters():
 def find_nth_modulo_number(x, y, n):
     """
     Find the N-th number Z that satisfies X = Z (mod Y)
-    
-    Args:
-    x (int): The current block's value
-    y (int): The modulo base
-    n (int): Which occurrence of a matching number we want
-    
-    Returns:
-    int: The N-th number satisfying the modulo condition
     """
     if y <= 0:
         raise ValueError("Modulo base must be positive")
@@ -99,22 +94,54 @@ def find_nth_modulo_number(x, y, n):
     # Return the nth number found, or the last candidate
     return candidates[n-1] if len(candidates) >= n else candidates[-1]
 
-def merge_with_modulo_rule(x, y):
+def spawn_new_block():
     """
-    Merge two blocks according to the modulo game rules.
-    
-    Args:
-    x (int): Value of the first block
-    y (int): Value of the block being merged
-    
-    Returns:
-    int: The merged block value
+    Spawn a new block on an empty grid cell.
+    Modulo blocks have a small chance of spawning.
     """
-    if MODULO_Y is None or MODULO_N is None:
-        return x + y  # Fallback to standard 2048 rule
+    # Find empty cells
+    empty_cells = [
+        (row, col) 
+        for row in range(GRID_SIZE) 
+        for col in range(GRID_SIZE) 
+        if blocks[row][col] == 0
+    ]
     
-    merged_value = find_nth_modulo_number(x, MODULO_Y, MODULO_N)
-    return merged_value
+    if not empty_cells:
+        return False
+    
+    # Choose a random empty cell
+    row, col = random.choice(empty_cells)
+    
+    # Determine block type and value
+    if random.random() < MODULO_BLOCK_CHANCE:
+        # Modulo block (pink)
+        blocks[row][col] = random.choice([2, 4, 8])  # Modulo blocks start smaller
+    else:
+        # Normal block (yellow)
+        blocks[row][col] = 2 if random.random() < 0.9 else 4
+    
+    return True
+
+def is_modulo_block(value):
+    """
+    Check if a block is a modulo block
+    """
+    return MODULO_Y and value % MODULO_Y == 0
+
+def merge_blocks(block1, block2):
+    """
+    Determine how blocks merge based on their type
+    """
+    # If blocks are the same type (both normal or both modulo)
+    if is_modulo_block(block1) == is_modulo_block(block2):
+        if MODULO_Y and MODULO_N:
+            return find_nth_modulo_number(block1, MODULO_Y, MODULO_N)
+        else:
+            return block1 + block2
+    
+    # If different types, can't merge
+    return None
 
 # -----------------------------
 # Existing Game Functions
@@ -148,16 +175,23 @@ def draw_grid():
                 x_pos = display_col * (TILE_SIZE + TILE_THICKNESS) + TILE_THICKNESS
                 y_pos = display_row * (TILE_SIZE + TILE_THICKNESS) + TILE_THICKNESS
 
+                # Determine block color
+                if is_modulo_block(blocks[row][col]):
+                    block_color = (255, 105, 180)  # Pink for modulo blocks
+                else:
+                    block_color = (255, 255, 0)  # Yellow for normal blocks
+
                 # Draw the block rectangle
-                block_color = (255, 255, 0)  # Yellow block
                 draw.rectangle(
                     [x_pos, y_pos, x_pos + TILE_SIZE, y_pos + TILE_SIZE],
                     fill=block_color
                 )
 
-                # Draw the block value and modulo parameters (if set)
+                # Draw the block value
                 text = str(blocks[row][col])
-                if MODULO_Y and MODULO_N:
+
+                # Add modulo parameters for modulo blocks
+                if is_modulo_block(blocks[row][col]) and MODULO_Y and MODULO_N:
                     text += f"\n(mod {MODULO_Y}, {MODULO_N})"
 
                 # Calculate text size and position
@@ -176,7 +210,7 @@ def draw_grid():
 
 def slide_blocks(direction):
     """
-    Modified slide_blocks to incorporate modulo merging.
+    Modified slide_blocks to incorporate new merging and block spawning logic
     """
     global blocks, animation_queue
     row_offset, col_offset = DIRECTIONS[direction]
@@ -194,18 +228,19 @@ def slide_blocks(direction):
                 
                 if (0 <= next_row < GRID_SIZE and 0 <= next_col < GRID_SIZE):
                     # Merge condition
-                    if (blocks[row][col] != 0 and blocks[next_row][next_col] != 0 
-                        and blocks[row][col] == blocks[next_row][next_col]):
-                        # Use modulo merge rule
-                        new_blocks[next_row][next_col] = merge_with_modulo_rule(
+                    if (blocks[row][col] != 0 and blocks[next_row][next_col] != 0):
+                        merged_value = merge_blocks(
                             blocks[row][col], 
                             blocks[next_row][next_col]
                         )
-                        new_blocks[row][col] = 0
-                        moved = True
-                        any_block_moved = True
+                        
+                        if merged_value:
+                            new_blocks[next_row][next_col] = merged_value
+                            new_blocks[row][col] = 0
+                            moved = True
+                            any_block_moved = True
                     
-                    # Movement condition (similar to original)
+                    # Movement condition
                     elif (blocks[row][col] != 0 and blocks[next_row][next_col] == 0):
                         new_blocks[next_row][next_col] = blocks[row][col]
                         new_blocks[row][col] = 0
@@ -217,6 +252,10 @@ def slide_blocks(direction):
             animation_queue.append(copy.deepcopy(blocks))
         else:
             break  # Stop if no more moves possible
+
+    # Spawn new block after move
+    if moved and random.random() < SPAWN_CHANCE:
+        spawn_new_block()
 
     return moved
 
@@ -247,6 +286,9 @@ def main():
     """
     # Roll modulo parameters at game start
     roll_modulo_parameters()
+    
+    # Initial block spawn
+    spawn_new_block()
     
     while True:
         # Check for joystick input
