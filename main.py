@@ -303,7 +303,7 @@ def display_game_rules():
     if MODULO_Y and MODULO_N:
         rules = [
             f"Find the {MODULO_N}-th number",
-            f"that satisfies x = z (mod {MODULO_Y})",
+            f"satisfies x = z (mod {MODULO_Y})",
             "",
             "Merge blocks by matching:",
             "- Same type blocks",
@@ -320,7 +320,7 @@ def display_game_rules():
     for i, line in enumerate(rules):
         bbox = draw.textbbox((0, 0), line, font=rule_font)
         line_width = bbox[2] - bbox[0]
-        draw.text(((disp.width - line_width) // 2, 60 + i * 25), line, font=rule_font, fill=(200, 200, 200))
+        draw.text(((disp.width - line_width) // 2, 40 + i * 25), line, font=rule_font, fill=(200, 200, 200))
 
     # Draw instructions
     instructions = [
@@ -330,7 +330,7 @@ def display_game_rules():
     for i, line in enumerate(instructions):
         bbox = draw.textbbox((0, 0), line, font=instruction_font)
         line_width = bbox[2] - bbox[0]
-        draw.text(((disp.width - line_width) // 2, 180 + i * 25), line, font=instruction_font, fill=(255, 255, 255))
+        draw.text(((disp.width - line_width) // 2, 190 + i * 25), line, font=instruction_font, fill=(255, 255, 255))
 
     # Draw a border
     draw.rectangle((0, 0, disp.width-1, disp.height-1), outline=(255, 255, 255))
@@ -358,11 +358,11 @@ def main():
         
         # Wait for button press
         print("Waiting for button press")
-        if not buttons['B'].value:  # Right button as A (start game)
-            print("B")
-            rules_screen = False
-        elif not buttons['A'].value:  # Left button as B (re-roll rules)
+        if not buttons['A'].value: 
             print("A")
+            rules_screen = False
+        elif not buttons['B'].value:
+            print("B")
             roll_modulo_parameters()
         
         time.sleep(0.2)  # Debounce delay
