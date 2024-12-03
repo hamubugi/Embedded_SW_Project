@@ -4,7 +4,7 @@ import time
 import copy
 import random
 from PIL import ImageFont
-import setup  # Import the setup module we just created
+import setup  # Import the setup module we created earlier
 
 # Import hardware components from setup.py
 disp = setup.disp
@@ -38,10 +38,10 @@ blocks = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]  # Empty grid
 
 # Adjusted directions due to display rotation
 DIRECTIONS = {
-    "left": (0, -1),   # Move left in array indices
-    "right": (0, 1),   # Move right in array indices
-    "up": (1, 0),      # Move up in array indices
-    "down": (-1, 0),   # Move down in array indices
+    "left": (0, 1),    # Left moves right in array indices (due to rotation)
+    "right": (0, -1),  # Right moves left in array indices
+    "up": (-1, 0),     # Up moves down in array indices
+    "down": (1, 0),    # Down moves up in array indices
 }
 
 # Animation queue to store intermediate states for smooth movement
@@ -68,7 +68,7 @@ def roll_modulo_parameters():
     # Randomly choose N (which number in the sequence we want)
     MODULO_N = random.randint(1, 10)
     
-    print(f"Game Modulo Rules: {MODULO_N}-th number satisfying x = z (mod {MODULO_Y})")
+    print(f"Game Modulo Rules: Find the {MODULO_N}-th number satisfying x ≡ z (mod {MODULO_Y})")
     return MODULO_Y, MODULO_N
 
 def find_nth_modulo_number(x, y, n):
@@ -295,6 +295,7 @@ def get_direction_pressed():
         return "up"
     else:
         return None
+
 def check_game_over():
     """
     Checks if there are any valid moves left.
@@ -381,38 +382,26 @@ def main():
     """
     The main game loop with rules screen.
     """
-    #print("Entering main() function")
-
     # Initialize game with first set of modulo parameters
-    #print("Calling roll_modulo_parameters()")
     roll_modulo_parameters()
     
     # Rules screen loop
     rules_screen = True
-    #print("Entering rules screen loop")
     while rules_screen:
         # Display game rules
-        #print("Calling display_game_rules()")
         display_game_rules()
         
         # Wait for button press
-        #print("Waiting for button press")
-        if not buttons['A'].value: 
-            print("A")
+        if not buttons['A'].value:  # A button pressed
             rules_screen = False
-        elif not buttons['B'].value:
-            print("B")
+        elif not buttons['B'].value:  # B button pressed (re-roll rules)
             roll_modulo_parameters()
         
         time.sleep(0.2)  # Debounce delay
     
-    #print("Leaving rules screen loop")
-    
     # Initial block spawn after leaving rules screen
-    #print("Calling spawn_new_blocks()")
     spawn_new_blocks()
     
-    #print("Entering main game loop")
     while True:
         # Check for joystick input
         direction_pressed = get_direction_pressed()
@@ -429,6 +418,7 @@ def main():
                     for col in range(GRID_SIZE):
                         if is_modulo_block(blocks[row][col]):
                             print(f"Modulo block at ({row},{col}) with value {blocks[row][col]}")
+
             else:
                 print("No blocks moved or merged")
 
