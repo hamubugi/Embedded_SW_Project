@@ -96,4 +96,3 @@ def move_down(grid):
     new_grid, changed, score = move_right(transposed_grid)
     new_grid = transpose(new_grid)
     return new_grid, changed, score
-# logic.py

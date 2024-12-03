@@ -17,19 +17,32 @@ draw = hardware_setup.draw
 width = hardware_setup.width
 height = hardware_setup.height
 
-# Access grid constants
-GRID_SIZE = hardware_setup.GRID_SIZE
-TILE_SIZE = hardware_setup.TILE_SIZE
-TILE_THICKNESS = hardware_setup.TILE_THICKNESS
-GRID_COLOR = hardware_setup.GRID_COLOR
-TOTAL_GRID_SIZE = hardware_setup.TOTAL_GRID_SIZE
-offset_x = hardware_setup.offset_x
-offset_y = hardware_setup.offset_y
+# Define Game States
+STATE_MAIN_MENU = 'MAIN_MENU'
+STATE_GAME = 'GAME'
+STATE_RESET_CONFIRM = 'RESET_CONFIRM'
+STATE_GAME_OVER = 'GAME_OVER'
+
+# Initialize the current state
+current_state = STATE_MAIN_MENU
+
+# Define Grid Parameters
+GRID_SIZE = 4  # 4x4 grid for 2048
+TILE_SIZE = 55  # Size of each tile in pixels
+TILE_THICKNESS = 4  # Thickness of grid lines in pixels
+GRID_COLOR = (255, 255, 255)  # White grid lines
+
+# Calculate total grid width and height
+TOTAL_GRID_SIZE = GRID_SIZE * TILE_SIZE + (GRID_SIZE + 1) * TILE_THICKNESS
+
+# Calculate offsets to center the grid on the display
+offset_x = (width - TOTAL_GRID_SIZE) // 2
+offset_y = (height - TOTAL_GRID_SIZE) // 2
 
 # Define Colors
 BACKGROUND_COLOR = (0, 0, 0)  # Black background
 EMPTY_TILE_COLOR = (205, 193, 180)
-TILE_COLORS = hardware_setup.TILE_COLORS = {
+TILE_COLORS = {
     2: (238, 228, 218),
     4: (237, 224, 200),
     8: (242, 177, 121),
@@ -54,7 +67,7 @@ except IOError:
     # Fallback to a default font if the specified font is not found
     font = ImageFont.load_default()
 
-# Initialize game
+# Initialize game variables
 grid = logic.start_game()
 game_state = 'GAME NOT OVER'
 score = 0
@@ -79,11 +92,156 @@ def save_high_score(new_high_score):
 # Load high score at the start
 high_score = load_high_score()
 
-def draw_grid():
+def draw_main_menu():
+    """
+    Draws the main menu screen with game rules, high score, and options.
+    """
+    # Clear the image buffer
+    draw.rectangle((0, 0, width, height), outline=0, fill=BACKGROUND_COLOR)
+
+    # Define text content
+    title_text = "2048 Game"
+    rules_text = "Swipe tiles to combine and reach 2048!"
+    high_score_text = f"High Score: {high_score}"
+    start_option = "A: Start Game"
+    reset_option = "B: Reset High Score"
+
+    # Define positions with adjusted spacing
+    # Start from 10% of the screen height
+    current_y = height * 0.1
+
+    # Draw Title
+    bbox = draw.textbbox((0, 0), title_text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    title_x = (width - text_width) / 2
+    title_y = current_y
+    draw.text((title_x, title_y), title_text, font=font, fill=(255, 255, 255))
+    current_y += text_height + 20  # Move down for next text
+
+    # Draw Rules
+    bbox = draw.textbbox((0, 0), rules_text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    rules_x = (width - text_width) / 2
+    rules_y = current_y
+    draw.text((rules_x, rules_y), rules_text, font=font, fill=(255, 255, 255))
+    current_y += text_height + 20
+
+    # Draw High Score
+    bbox = draw.textbbox((0, 0), high_score_text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    high_score_x = (width - text_width) / 2
+    high_score_y = current_y
+    draw.text((high_score_x, high_score_y), high_score_text, font=font, fill=(255, 255, 255))
+    current_y += text_height + 40  # Extra space before options
+
+    # Draw Start Option
+    bbox = draw.textbbox((0, 0), start_option, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    start_x = (width - text_width) / 2
+    start_y = current_y
+    draw.text((start_x, start_y), start_option, font=font, fill=(0, 255, 0))  # Green for Start
+    current_y += text_height + 20
+
+    # Draw Reset Option
+    bbox = draw.textbbox((0, 0), reset_option, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    reset_x = (width - text_width) / 2
+    reset_y = current_y
+    draw.text((reset_x, reset_y), reset_option, font=font, fill=(255, 0, 0))  # Red for Reset
+
+    # Update the display
+    disp.image(image)
+
+def draw_reset_confirm():
+    """
+    Draws the reset confirmation screen.
+    """
+    # Clear the image buffer
+    draw.rectangle((0, 0, width, height), outline=0, fill=BACKGROUND_COLOR)
+
+    # Define text content
+    confirm_text = "Press B again to confirm reset"
+
+    # Calculate text size and position
+    bbox = draw.textbbox((0, 0), confirm_text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    text_x = (width - text_width) / 2
+    text_y = (height - text_height) / 2
+
+    # Draw text
+    draw.text((text_x, text_y), confirm_text, font=font, fill=(255, 255, 255))
+
+    # Update the display
+    disp.image(image)
+
+def draw_game_over_screen(won=False):
+    """
+    Draws the game over screen showing the result and options.
+    """
+    # Clear the image buffer
+    draw.rectangle((0, 0, width, height), outline=0, fill=BACKGROUND_COLOR)
+
+    # Define text content
+    if won:
+        result_text = "You Won!"
+    else:
+        result_text = "Game Over!"
+    high_score_text = f"High Score: {high_score}"
+    restart_option = "A: Restart Game"
+    main_menu_option = "B: Main Menu"
+
+    # Calculate positions with adequate spacing
+    current_y = height * 0.4  # Start from 40% of the screen height
+
+    # Draw Result Text
+    bbox = draw.textbbox((0, 0), result_text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    result_x = (width - text_width) / 2
+    result_y = current_y
+    draw.text((result_x, result_y), result_text, font=font, fill=(255, 255, 255))
+    current_y += text_height + 20
+
+    # Draw High Score
+    bbox = draw.textbbox((0, 0), high_score_text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    high_score_x = (width - text_width) / 2
+    high_score_y = current_y
+    draw.text((high_score_x, high_score_y), high_score_text, font=font, fill=(255, 255, 255))
+    current_y += text_height + 40
+
+    # Draw Restart Option
+    bbox = draw.textbbox((0, 0), restart_option, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    restart_x = (width - text_width) / 2
+    restart_y = current_y
+    draw.text((restart_x, restart_y), restart_option, font=font, fill=(0, 255, 0))  # Green for Restart
+    current_y += text_height + 20
+
+    # Draw Main Menu Option
+    bbox = draw.textbbox((0, 0), main_menu_option, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    main_menu_x = (width - text_width) / 2
+    main_menu_y = current_y
+    draw.text((main_menu_x, main_menu_y), main_menu_option, font=font, fill=(255, 0, 0))  # Red for Main Menu
+
+    # Update the display
+    disp.image(image)
+
+def draw_game():
     """
     Draws the 2048 game grid and blocks on the display.
     """
-    # Clear the background
+    # Clear the image buffer
     draw.rectangle((0, 0, width, height), outline=0, fill=BACKGROUND_COLOR)
 
     # Draw grid lines
@@ -163,6 +321,58 @@ def draw_grid():
     # Update the display with the drawn image
     disp.image(image)
 
+def reset_game():
+    global grid, game_state, score
+    grid = logic.start_game()
+    game_state = 'GAME NOT OVER'
+    score = 0
+    draw_game()
+
+def handle_main_menu_buttons():
+    global current_state
+    # Handle Start Game (Button A)
+    if not buttons['A'].value:
+        current_state = STATE_GAME
+        # Initialize game variables
+        reset_game()
+        time.sleep(DEBOUNCE_TIME)
+
+    # Handle Reset High Score (Button B)
+    if not buttons['B'].value:
+        current_state = STATE_RESET_CONFIRM
+        draw_reset_confirm()
+        time.sleep(DEBOUNCE_TIME)
+
+def handle_reset_confirm_buttons():
+    global high_score, current_state
+    # Confirm Reset (Button B)
+    if not buttons['B'].value:
+        high_score = 0
+        save_high_score(high_score)
+        current_state = STATE_MAIN_MENU
+        draw_main_menu()
+        time.sleep(DEBOUNCE_TIME)
+
+    # Optional: Cancel Reset (Button A)
+    elif not buttons['A'].value:
+        current_state = STATE_MAIN_MENU
+        draw_main_menu()
+        time.sleep(DEBOUNCE_TIME)
+
+def handle_game_over_buttons(won=False):
+    global current_state, score, grid, game_state
+    # Restart Game (Button A)
+    if not buttons['A'].value:
+        current_state = STATE_GAME
+        reset_game()
+        time.sleep(DEBOUNCE_TIME)
+
+    # Return to Main Menu (Button B)
+    if not buttons['B'].value:
+        current_state = STATE_MAIN_MENU
+        draw_main_menu()
+        time.sleep(DEBOUNCE_TIME)
+
 def handle_move(direction):
     global grid, game_state, score, high_score
     if game_state != 'GAME NOT OVER':
@@ -185,17 +395,10 @@ def handle_move(direction):
             high_score = score
             save_high_score(high_score)
     game_state = logic.get_current_state(grid)
-    draw_grid()
+    draw_game()
 
-def reset_game():
-    global grid, game_state, score
-    grid = logic.start_game()
-    game_state = 'GAME NOT OVER'
-    score = 0
-    draw_grid()
-
-# Initial draw
-draw_grid()
+# Initial draw based on current state
+draw_main_menu()
 
 # Debounce variables
 last_press_time = 0
@@ -204,31 +407,36 @@ DEBOUNCE_TIME = 0.2  # seconds
 while True:
     current_time = time.time()
 
-    # Handle Up Button
-    if not buttons['up'].value and current_time - last_press_time > DEBOUNCE_TIME:
-        handle_move('UP')
-        last_press_time = current_time
+    if current_state == STATE_MAIN_MENU:
+        handle_main_menu_buttons()
 
-    # Handle Down Button
-    if not buttons['down'].value and current_time - last_press_time > DEBOUNCE_TIME:
-        handle_move('DOWN')
-        last_press_time = current_time
+    elif current_state == STATE_RESET_CONFIRM:
+        handle_reset_confirm_buttons()
 
-    # Handle Left Button
-    if not buttons['left'].value and current_time - last_press_time > DEBOUNCE_TIME:
-        handle_move('LEFT')
-        last_press_time = current_time
+    elif current_state == STATE_GAME:
+        # During the game, handle button presses for movement
+        if not buttons['up'].value and current_time - last_press_time > DEBOUNCE_TIME:
+            handle_move('UP')
+            last_press_time = current_time
 
-    # Handle Right Button
-    if not buttons['right'].value and current_time - last_press_time > DEBOUNCE_TIME:
-        handle_move('RIGHT')
-        last_press_time = current_time
+        if not buttons['down'].value and current_time - last_press_time > DEBOUNCE_TIME:
+            handle_move('DOWN')
+            last_press_time = current_time
 
-    # Handle Reset Button (Button A)
-    if not buttons['A'].value and current_time - last_press_time > DEBOUNCE_TIME:
-        reset_game()
-        last_press_time = current_time
+        if not buttons['left'].value and current_time - last_press_time > DEBOUNCE_TIME:
+            handle_move('LEFT')
+            last_press_time = current_time
 
-    # Optional: Add more functionalities or handle other buttons if needed
+        if not buttons['right'].value and current_time - last_press_time > DEBOUNCE_TIME:
+            handle_move('RIGHT')
+            last_press_time = current_time
 
-    time.sleep(0.1)  # Adjust sleep time as needed
+        if game_state in ['WON', 'LOST']:
+            current_state = STATE_GAME_OVER
+            draw_game_over_screen(won=(game_state == 'WON'))
+
+    elif current_state == STATE_GAME_OVER:
+        handle_game_over_buttons(won=(game_state == 'WON'))
+
+    # Sleep to reduce CPU usage
+    time.sleep(0.05)
