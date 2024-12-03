@@ -1,4 +1,4 @@
-# hardware_setup.py
+# setup.py
 
 import board
 import digitalio
@@ -6,20 +6,32 @@ from digitalio import DigitalInOut, Direction, Pull
 from PIL import Image, ImageDraw
 from adafruit_rgb_display import st7789
 
+# Hardware Initialization
+
 # Grid Parameters
 GRID_SIZE = 4  # 4x4 grid for 2048
-TILE_SIZE = 55  # Size of each tile in pixels
-TILE_THICKNESS = 4  # Thickness of grid lines in pixels
+TILE_SIZE = 50  # Size of each tile in pixels
+TILE_THICKNESS = 5  # Thickness of grid lines in pixels
 GRID_COLOR = (255, 255, 255)  # White grid lines
 
+# Tile Margins and Offsets
 # Calculate total grid width and height
 TOTAL_GRID_SIZE = GRID_SIZE * TILE_SIZE + (GRID_SIZE + 1) * TILE_THICKNESS
 
-# Offsets to center the grid on the display
-DISPLAY_WIDTH = 240
-DISPLAY_HEIGHT = 240
-offset_x = (DISPLAY_WIDTH - TOTAL_GRID_SIZE) // 2
-offset_y = (DISPLAY_HEIGHT - TOTAL_GRID_SIZE) // 2
+# Calculate offsets to center the grid on the display
+offset_x = (width - TOTAL_GRID_SIZE) // 2
+offset_y = (height - TOTAL_GRID_SIZE) // 2
+
+# Add these to be accessible
+constants = {
+    'GRID_SIZE': GRID_SIZE,
+    'TILE_SIZE': TILE_SIZE,
+    'TILE_THICKNESS': TILE_THICKNESS,
+    'GRID_COLOR': GRID_COLOR,
+    'TOTAL_GRID_SIZE': TOTAL_GRID_SIZE,
+    'offset_x': offset_x,
+    'offset_y': offset_y
+}
 
 # Display setup
 def init_display():
@@ -31,10 +43,9 @@ def init_display():
     spi = board.SPI()
     disp = st7789.ST7789(
         spi,
-        height=DISPLAY_HEIGHT,
-        width=DISPLAY_WIDTH,
+        height=240,
         y_offset=80,
-        rotation=180,  # Adjust based on your display orientation
+        rotation=180,  # Display is rotated by 180 degrees
         cs=cs_pin,
         dc=dc_pin,
         rst=reset_pin,
@@ -58,7 +69,6 @@ def init_buttons():
     button_B = DigitalInOut(board.D6)
     button_B.direction = Direction.INPUT
     button_B.pull = Pull.UP
-
     button_L = DigitalInOut(board.D27)
     button_L.direction = Direction.INPUT
     button_L.pull = Pull.UP
@@ -76,8 +86,8 @@ def init_buttons():
     button_D.pull = Pull.UP
 
     return {
-        'A': button_A,
-        'B': button_B,
+        'A' : button_A,
+        'B' : button_B,
         'left': button_L,
         'right': button_R,
         'up': button_U,
@@ -94,3 +104,27 @@ width = disp.width  # Should be 240
 height = disp.height  # Should be 240
 image = Image.new("RGB", (width, height))
 draw = ImageDraw.Draw(image)
+
+GRID_SIZE = 4  # 4x4 grid for 2048
+TILE_SIZE = 50  # Size of each tile in pixels
+TILE_THICKNESS = 5  # Thickness of grid lines in pixels
+GRID_COLOR = (255, 255, 255)  # White grid lines
+
+# Tile Margins and Offsets
+# Calculate total grid width and height
+TOTAL_GRID_SIZE = GRID_SIZE * TILE_SIZE + (GRID_SIZE + 1) * TILE_THICKNESS
+
+# Calculate offsets to center the grid on the display
+offset_x = (width - TOTAL_GRID_SIZE) // 2
+offset_y = (height - TOTAL_GRID_SIZE) // 2
+
+# Add these to be accessible
+constants = {
+    'GRID_SIZE': GRID_SIZE,
+    'TILE_SIZE': TILE_SIZE,
+    'TILE_THICKNESS': TILE_THICKNESS,
+    'GRID_COLOR': GRID_COLOR,
+    'TOTAL_GRID_SIZE': TOTAL_GRID_SIZE,
+    'offset_x': offset_x,
+    'offset_y': offset_y
+}
