@@ -6,6 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 import hardware_setup  # Import the hardware setup
 import os  # For high score persistence
 import traceback
+import sys
 
 # Access hardware components from hardware_setup
 disp = hardware_setup.disp
@@ -114,9 +115,10 @@ score = 0
 last_press_time = 0
 DEBOUNCE_TIME = 0.2  # seconds
 
-# Button press counters for debugging
-right_press_count = 0
-left_press_count = 0
+# Sequence tracking variables for debugging
+current_sequence_button = None  # Tracks the current button in the sequence ('LEFT' or 'RIGHT')
+current_sequence_count = 0        # Counts consecutive presses of the current button
+SEQUENCE_THRESHOLD = 16           # Number of consecutive presses required to trigger debug commands
 
 def print_debug_grid():
     """
@@ -239,7 +241,6 @@ def draw_main_menu():
         reset_option = "B: Reset High Score"
 
         # Define positions with appropriate y-coordinates
-        # Starting from top with margins similar to Game Over screen
         margin_top = 10  # Top margin
         spacing = 20      # Spacing between elements
 
@@ -371,7 +372,7 @@ def initialize_game():
     """
     Initializes the game by resetting the grid and adding two random tiles.
     """
-    global grid, score, right_press_count, left_press_count
+    global grid, score, current_sequence_button, current_sequence_count
     grid = [
         [0, 0, 0, 0],
         [0, 0, 0, 0],
@@ -379,8 +380,8 @@ def initialize_game():
         [0, 0, 0, 0]
     ]
     score = 0
-    right_press_count = 0
-    left_press_count = 0
+    current_sequence_button = None
+    current_sequence_count = 0
     print("Initializing game grid.")
     add_random_tile()
     add_random_tile()
@@ -529,32 +530,57 @@ try:
 
         elif current_state == STATE_GAME:
             # Handle directional button presses
+
+            # Handle Up Button Press
             if not buttons['up'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
                 handle_move('UP')
+                # Any non-sequence button press resets the sequence
+                current_sequence_button = None
+                current_sequence_count = 0
                 last_press_time = current_time
 
+            # Handle Down Button Press
             if not buttons['down'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
                 handle_move('DOWN')
+                # Any non-sequence button press resets the sequence
+                current_sequence_button = None
+                current_sequence_count = 0
                 last_press_time = current_time
 
+            # Handle Left Button Press
             if not buttons['left'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
                 handle_move('LEFT')
-                left_press_count += 1  # Increment left press counter
-                print(f"Left Button Press Count: {left_press_count}")
-                if left_press_count >= 16:
-                    print("Left button pressed 16 times: Triggering Game Over (Lose).")
+                if current_sequence_button == 'LEFT':
+                    current_sequence_count += 1
+                else:
+                    current_sequence_button = 'LEFT'
+                    current_sequence_count = 1
+                print(f"Left Button Press Count: {current_sequence_count}")
+                if current_sequence_count >= SEQUENCE_THRESHOLD:
+                    print("Left button pressed 16 times consecutively: Triggering Game Over (Lose).")
                     current_state = STATE_GAME_OVER
                     draw_game_over_screen(won=False)
+                    # Reset sequence after triggering
+                    current_sequence_button = None
+                    current_sequence_count = 0
                 last_press_time = current_time
 
+            # Handle Right Button Press
             if not buttons['right'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
                 handle_move('RIGHT')
-                right_press_count += 1  # Increment right press counter
-                print(f"Right Button Press Count: {right_press_count}")
-                if right_press_count >= 16:
-                    print("Right button pressed 16 times: Triggering Game Over (Win).")
+                if current_sequence_button == 'RIGHT':
+                    current_sequence_count += 1
+                else:
+                    current_sequence_button = 'RIGHT'
+                    current_sequence_count = 1
+                print(f"Right Button Press Count: {current_sequence_count}")
+                if current_sequence_count >= SEQUENCE_THRESHOLD:
+                    print("Right button pressed 16 times consecutively: Triggering Game Over (Win).")
                     current_state = STATE_GAME_OVER
                     draw_game_over_screen(won=True)
+                    # Reset sequence after triggering
+                    current_sequence_button = None
+                    current_sequence_count = 0
                 last_press_time = current_time
 
             # Handle Restart Game (Button A)
@@ -562,9 +588,9 @@ try:
                 print("Button A pressed: Restarting game.")
                 current_state = STATE_GAME
                 initialize_game()
-                # Reset counters upon restart
-                right_press_count = 0
-                left_press_count = 0
+                # Reset sequence upon restart
+                current_sequence_button = None
+                current_sequence_count = 0
                 last_press_time = current_time
 
             # Handle Return to Main Menu (Button B)
@@ -572,9 +598,9 @@ try:
                 print("Button B pressed: Returning to main menu.")
                 current_state = STATE_MAIN_MENU
                 draw_main_menu()
-                # Reset counters when returning to main menu
-                right_press_count = 0
-                left_press_count = 0
+                # Reset sequence when returning to main menu
+                current_sequence_button = None
+                current_sequence_count = 0
                 last_press_time = current_time
 
         elif current_state == STATE_RESET_CONFIRM:
@@ -585,12 +611,15 @@ try:
 
         elif current_state == STATE_GAME_OVER:
             # Handle Restart or Return to Main Menu
+
+            # Handle Restart Game (Button A)
             if not buttons['A'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
                 print("Button A pressed: Restarting game.")
                 current_state = STATE_GAME
                 initialize_game()
                 last_press_time = current_time
 
+            # Handle Return to Main Menu (Button B)
             if not buttons['B'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
                 print("Button B pressed: Returning to main menu.")
                 current_state = STATE_MAIN_MENU
