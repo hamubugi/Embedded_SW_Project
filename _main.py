@@ -4,7 +4,7 @@ import time
 import copy
 import random
 from PIL import ImageFont
-import setup  # Import the setup module we just created
+import setup  # Import the setup module we created earlier
 
 # Import hardware components from setup.py
 disp = setup.disp
@@ -30,18 +30,17 @@ MAX_MODULO_BASE = 20  # Maximum modulo base
 MAX_BLOCK_VALUE = 2048  # Maximum block value
 
 # Spawn Mechanics
-SPAWN_CHANCE = 0.2  # 20% chance of spawning a new block after each move
-MODULO_BLOCK_CHANCE = 0.1  # 10% chance of spawning a modulo block
+SPAWN_CHANCE = 1.0  # 100% chance of spawning new blocks after each move
 
 # Initialize block positions
 blocks = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]  # Empty grid
 
 # Adjusted directions due to display rotation
 DIRECTIONS = {
-    "left": (0, -1),   # Move left in array indices
-    "right": (0, 1),   # Move right in array indices
-    "up": (1, 0),      # Move up in array indices
-    "down": (-1, 0),   # Move down in array indices
+    "left": (0, -1),    # Move left in array indices
+    "right": (0, 1),    # Move right in array indices
+    "up": (-1, 0),      # Move up in array indices
+    "down": (1, 0),     # Move down in array indices
 }
 
 # Animation queue to store intermediate states for smooth movement
@@ -61,38 +60,30 @@ def roll_modulo_parameters():
     Randomly determine the modulo parameters at game start.
     """
     global MODULO_Y, MODULO_N
-    
-    # Randomly choose the modulo base between 5 and MAX_MODULO_BASE
     MODULO_Y = random.randint(5, MAX_MODULO_BASE)
-    
-    # Randomly choose N (which number in the sequence we want)
     MODULO_N = random.randint(1, 10)
-    
-    print(f"Game Modulo Rules: {MODULO_N}-th number satisfying x = z (mod {MODULO_Y})")
+    print(f"Game Modulo Rules: Find the {MODULO_N}-th number satisfying x ≡ z (mod {MODULO_Y})")
     return MODULO_Y, MODULO_N
 
 def find_nth_modulo_number(x, y, n):
     """
-    Find the N-th number Z that satisfies X = Z (mod Y)
+    Find the N-th number Z that satisfies X ≡ Z (mod Y)
     """
     if y <= 0:
         raise ValueError("Modulo base must be positive")
-    
-    candidates = []
-    z = x  # Start from x itself
-    
-    # Find first n numbers that satisfy the modulo condition
-    while len(candidates) < n:
+    z = x % y
+    if z == 0:
+        z = y
+    count = 0
+    while True:
         if z % y == x % y:
-            candidates.append(z)
-        z += 1
-        
-        # Prevent infinite loops or extremely large numbers
+            count += 1
+            if count == n:
+                return z
+        z += y
         if z > MAX_BLOCK_VALUE:
             break
-    
-    # Return the nth number found, or the last candidate
-    return candidates[n-1] if len(candidates) >= n else candidates[-1]
+    return z
 
 def spawn_new_blocks():
     global blocks
@@ -123,10 +114,10 @@ def spawn_new_blocks():
 
     return True
 
-
 def is_modulo_block(value):
     """
-    Check if a block is a modulo block
+    Check if a block is a modulo block.
+    Returns True only if value is non-zero and a multiple of MODULO_Y.
     """
     return value != 0 and MODULO_Y and value % MODULO_Y == 0
 
@@ -286,15 +277,16 @@ def get_direction_pressed():
         str or None: The direction pressed ('left', 'right', 'up', 'down'), or None if no direction is pressed.
     """
     if not buttons['left'].value:  # Left button pressed
-        return "right"  # Due to rotation, left button moves right in array
-    elif not buttons['right'].value:  # Right button pressed
         return "left"
+    elif not buttons['right'].value:  # Right button pressed
+        return "right"
     elif not buttons['up'].value:  # Up button pressed
-        return "down"
-    elif not buttons['down'].value:  # Down button pressed
         return "up"
+    elif not buttons['down'].value:  # Down button pressed
+        return "down"
     else:
         return None
+
 def check_game_over():
     """
     Checks if there are any valid moves left.
@@ -314,105 +306,20 @@ def check_game_over():
                     return False  # Merge is possible
     return True  # No moves left
 
-def display_game_rules():
-    """
-    Display game rules on the screen using drawing methods
-    """
-    global MODULO_Y, MODULO_N
-
-    # Clear the background to black
-    draw.rectangle((0, 0, disp.width, disp.height), outline=0, fill=(0, 0, 0))
-
-    # Prepare different text sizes using the same font
-    title_font_size = 28
-    rule_font_size = 18
-    instruction_font_size = 16
-
-    title_font = ImageFont.truetype(FONT_PATH, title_font_size)
-    rule_font = ImageFont.truetype(FONT_PATH, rule_font_size)
-    instruction_font = ImageFont.truetype(FONT_PATH, instruction_font_size)
-
-    # Draw title (white text)
-    title_text = "Modulo 2048"
-    title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
-    title_width = title_bbox[2] - title_bbox[0]
-    draw.text(((disp.width - title_width) // 2, 10), title_text, font=title_font, fill=(255, 255, 255))
-
-    # Prepare rules text
-    if MODULO_Y and MODULO_N:
-        rules = [
-            f"Find the {MODULO_N}-th number",
-            f"satisfies x = z (mod {MODULO_Y})",
-            "",
-            "Merge blocks by matching:",
-            "- Same type blocks",
-            "- Following modulo rule",
-        ]
-    else:
-        rules = [
-            "Merge blocks with",
-            "matching types",
-            "Follow modulo sequence",
-        ]
-
-    # Draw rules text
-    for i, line in enumerate(rules):
-        bbox = draw.textbbox((0, 0), line, font=rule_font)
-        line_width = bbox[2] - bbox[0]
-        draw.text(((disp.width - line_width) // 2, 40 + i * 25), line, font=rule_font, fill=(200, 200, 200))
-
-    # Draw instructions
-    instructions = [
-        "A: START GAME",
-        "B: RE-ROLL RULES"
-    ]
-    for i, line in enumerate(instructions):
-        bbox = draw.textbbox((0, 0), line, font=instruction_font)
-        line_width = bbox[2] - bbox[0]
-        draw.text(((disp.width - line_width) // 2, 190 + i * 25), line, font=instruction_font, fill=(255, 255, 255))
-
-    # Draw a border
-    draw.rectangle((0, 0, disp.width-1, disp.height-1), outline=(255, 255, 255))
-
-    # Update the display
-    disp.image(image)
+# -----------------------------
+# Main Game Loop
+# -----------------------------
 
 def main():
     """
-    The main game loop with rules screen.
+    The main game loop.
     """
-    #print("Entering main() function")
-
-    # Initialize game with first set of modulo parameters
-    #print("Calling roll_modulo_parameters()")
+    # Roll modulo parameters at game start
     roll_modulo_parameters()
-    
-    # Rules screen loop
-    rules_screen = True
-    #print("Entering rules screen loop")
-    while rules_screen:
-        # Display game rules
-        #print("Calling display_game_rules()")
-        display_game_rules()
-        
-        # Wait for button press
-        #print("Waiting for button press")
-        if not buttons['A'].value: 
-            print("A")
-            rules_screen = False
-        elif not buttons['B'].value:
-            print("B")
-            roll_modulo_parameters()
-        
-        time.sleep(0.2)  # Debounce delay
-    
-    #print("Leaving rules screen loop")
-    
-    # Initial block spawn after leaving rules screen
-    #print("Calling spawn_new_blocks()")
+
+    # Initial block spawn
     spawn_new_blocks()
-    
-    #print("Entering main game loop")
+
     while True:
         # Check for joystick input
         direction_pressed = get_direction_pressed()
