@@ -18,20 +18,29 @@ def add_new_2(mat):
     r, c = random.choice(empty_cells)
     mat[r][c] = 2
 
+# logic.py
+
 def get_current_state(mat):
+    print("Checking game state...")
     for row in mat:
         if 2048 in row:
+            print("Found 2048 tile, state: WON")
             return 'WON'
     for row in mat:
         if 0 in row:
-            return 'GAME NOT OVER'
+            print("Found empty cell, state: GAME_NOT_OVER")
+            return 'GAME_NOT_OVER'
     for i in range(4):
         for j in range(4):
             if j < 3 and mat[i][j] == mat[i][j + 1]:
-                return 'GAME NOT OVER'
+                print(f"Found horizontal merge possibility at ({i}, {j}), state: GAME_NOT_OVER")
+                return 'GAME_NOT_OVER'
             if i < 3 and mat[i][j] == mat[i + 1][j]:
-                return 'GAME NOT OVER'
+                print(f"Found vertical merge possibility at ({i}, {j}), state: GAME_NOT_OVER")
+                return 'GAME_NOT_OVER'
+    print("No moves left, state: LOST")
     return 'LOST'
+
 
 def compress(mat):
     changed = False
