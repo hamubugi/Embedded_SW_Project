@@ -1,0 +1,16 @@
+[Unit]
+Description=2048 Game Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python /home/deebie/Project/main.py
+WorkingDirectory=/home/deebie/Project
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=deebie
+Environment=DISPLAY=:0
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
