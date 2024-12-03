@@ -1,12 +1,10 @@
 # main.py
 
 import time
-import random
-from colorsys import hsv_to_rgb
 from PIL import Image, ImageDraw, ImageFont
-import logic  # Import the game logic
 import hardware_setup  # Import the hardware setup
 import os  # For high score persistence
+import traceback
 
 # Access hardware components from hardware_setup
 disp = hardware_setup.disp
@@ -25,6 +23,7 @@ STATE_GAME_OVER = 'GAME_OVER'
 
 # Initialize the current state
 current_state = STATE_MAIN_MENU
+print(f"Initial State: {current_state}")
 
 # Define Grid Parameters
 GRID_SIZE = 4  # 4x4 grid for 2048
@@ -34,10 +33,12 @@ GRID_COLOR = (255, 255, 255)  # White grid lines
 
 # Calculate total grid width and height
 TOTAL_GRID_SIZE = GRID_SIZE * TILE_SIZE + (GRID_SIZE + 1) * TILE_THICKNESS
+print(f"Total Grid Size: {TOTAL_GRID_SIZE}x{TOTAL_GRID_SIZE} pixels")
 
 # Calculate offsets to center the grid on the display
 offset_x = (width - TOTAL_GRID_SIZE) // 2
 offset_y = (height - TOTAL_GRID_SIZE) // 2
+print(f"Grid Offsets - X: {offset_x}, Y: {offset_y}")
 
 # Define Colors
 BACKGROUND_COLOR = (0, 0, 0)  # Black background
@@ -63,31 +64,44 @@ FONT_SIZE = 24
 # Load font with fallback
 try:
     font = ImageFont.truetype(FONT_PATH, FONT_SIZE)
+    print(f"Font loaded successfully from {FONT_PATH}.")
 except IOError:
     # Fallback to a default font if the specified font is not found
     font = ImageFont.load_default()
+    print("Default font loaded as fallback.")
 
-# Initialize game variables
-grid = logic.start_game()
-game_state = 'GAME NOT OVER'
-score = 0
-high_score = 0  # Initialize high score
+# Initialize a 4x4 debug grid for terminal display
+debug_grid = [
+    [2, 0, 0, 2],
+    [0, 4, 4, 0],
+    [0, 0, 8, 0],
+    [16, 0, 0, 16]
+]
 
 # High Score Persistence Setup
 HIGH_SCORE_FILE = "high_score.txt"
 
 def load_high_score():
     if not os.path.exists(HIGH_SCORE_FILE):
+        print("High score file not found. Initializing to 0.")
         return 0
     with open(HIGH_SCORE_FILE, 'r') as f:
         try:
-            return int(f.read())
+            hs = int(f.read())
+            print(f"High score loaded: {hs}")
+            return hs
         except ValueError:
+            print("High score file corrupted. Resetting to 0.")
             return 0
 
 def save_high_score(new_high_score):
-    with open(HIGH_SCORE_FILE, 'w') as f:
-        f.write(str(new_high_score))
+    try:
+        with open(HIGH_SCORE_FILE, 'w') as f:
+            f.write(str(new_high_score))
+        print(f"High score saved: {new_high_score}")
+    except Exception as e:
+        print("Error saving high score:", e)
+        traceback.print_exc(file=sys.stdout)
 
 # Load high score at the start
 high_score = load_high_score()
@@ -96,347 +110,255 @@ def draw_main_menu():
     """
     Draws the main menu screen with game rules, high score, and options.
     """
-    # Clear the image buffer
-    draw.rectangle((0, 0, width, height), outline=0, fill=BACKGROUND_COLOR)
+    try:
+        print("Drawing Main Menu...")
+        # Clear the background
+        draw.rectangle((0, 0, width, height), outline=0, fill=BACKGROUND_COLOR)
 
-    # Define text content
-    title_text = "2048 Game"
-    rules_text = "Swipe tiles to combine and reach 2048!"
-    high_score_text = f"High Score: {high_score}"
-    start_option = "A: Start Game"
-    reset_option = "B: Reset High Score"
+        # Define text content
+        title_text = "2048 Game"
+        rules_text = "Swipe tiles to combine\nand reach 2048!"
+        high_score_text = f"High Score: {high_score}"
+        start_option = "A: Start Game"
+        reset_option = "B: Reset High Score"
 
-    # Define positions with adjusted spacing
-    # Start from 10% of the screen height
-    current_y = height * 0.1
+        # Define positions
+        # Since the grid fills the display, adjust positions to fit
 
-    # Draw Title
-    bbox = draw.textbbox((0, 0), title_text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    title_x = (width - text_width) / 2
-    title_y = current_y
-    draw.text((title_x, title_y), title_text, font=font, fill=(255, 255, 255))
-    current_y += text_height + 20  # Move down for next text
+        # Draw Title
+        title_bbox = draw.textbbox((0, 0), title_text, font=font)
+        title_width = title_bbox[2] - title_bbox[0]
+        title_height = title_bbox[3] - title_bbox[1]
+        title_x = (width - title_width) / 2
+        title_y = 10  # Top margin
+        draw.text((title_x, title_y), title_text, font=font, fill=(255, 255, 255))
+        print("Title drawn.")
 
-    # Draw Rules
-    bbox = draw.textbbox((0, 0), rules_text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    rules_x = (width - text_width) / 2
-    rules_y = current_y
-    draw.text((rules_x, rules_y), rules_text, font=font, fill=(255, 255, 255))
-    current_y += text_height + 20
+        # Draw Rules
+        rules_bbox = draw.textbbox((0, 0), rules_text, font=font)
+        rules_width = rules_bbox[2] - rules_bbox[0]
+        rules_height = rules_bbox[3] - rules_bbox[1]
+        rules_x = (width - rules_width) / 2
+        rules_y = title_y + title_height + 10
+        draw.multiline_text((rules_x, rules_y), rules_text, font=font, fill=(255, 255, 255), align="center")
+        print("Rules drawn.")
 
-    # Draw High Score
-    bbox = draw.textbbox((0, 0), high_score_text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    high_score_x = (width - text_width) / 2
-    high_score_y = current_y
-    draw.text((high_score_x, high_score_y), high_score_text, font=font, fill=(255, 255, 255))
-    current_y += text_height + 40  # Extra space before options
+        # Draw High Score
+        high_score_bbox = draw.textbbox((0, 0), high_score_text, font=font)
+        high_score_width = high_score_bbox[2] - high_score_bbox[0]
+        high_score_height = high_score_bbox[3] - high_score_bbox[1]
+        high_score_x = (width - high_score_width) / 2
+        high_score_y = rules_y + rules_height + 20
+        draw.text((high_score_x, high_score_y), high_score_text, font=font, fill=(255, 255, 255))
+        print("High score drawn.")
 
-    # Draw Start Option
-    bbox = draw.textbbox((0, 0), start_option, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    start_x = (width - text_width) / 2
-    start_y = current_y
-    draw.text((start_x, start_y), start_option, font=font, fill=(0, 255, 0))  # Green for Start
-    current_y += text_height + 20
+        # Draw Start Option
+        start_bbox = draw.textbbox((0, 0), start_option, font=font)
+        start_width = start_bbox[2] - start_bbox[0]
+        start_height = start_bbox[3] - start_bbox[1]
+        start_x = (width - start_width) / 2
+        start_y = high_score_y + high_score_height + 30
+        draw.text((start_x, start_y), start_option, font=font, fill=(0, 255, 0))  # Green for Start
+        print("Start option drawn.")
 
-    # Draw Reset Option
-    bbox = draw.textbbox((0, 0), reset_option, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    reset_x = (width - text_width) / 2
-    reset_y = current_y
-    draw.text((reset_x, reset_y), reset_option, font=font, fill=(255, 0, 0))  # Red for Reset
+        # Draw Reset Option
+        reset_bbox = draw.textbbox((0, 0), reset_option, font=font)
+        reset_width = reset_bbox[2] - reset_bbox[0]
+        reset_height = reset_bbox[3] - reset_bbox[1]
+        reset_x = (width - reset_width) / 2
+        reset_y = start_y + start_height + 10
+        draw.text((reset_x, reset_y), reset_option, font=font, fill=(255, 0, 0))  # Red for Reset
+        print("Reset option drawn.")
 
-    # Update the display
-    disp.image(image)
+        # Update the display
+        disp.image(image)
+        print("Main Menu displayed successfully.")
+    except Exception as e:
+        print("Error in draw_main_menu:", e)
+        traceback.print_exc(file=sys.stdout)
 
-def draw_reset_confirm():
+def draw_debug_grid():
     """
-    Draws the reset confirmation screen.
+    Draws a static grid on the display for debugging purposes and prints it to the terminal.
     """
-    # Clear the image buffer
-    draw.rectangle((0, 0, width, height), outline=0, fill=BACKGROUND_COLOR)
+    try:
+        print("Drawing Debug Grid...")
+        # Clear the background
+        draw.rectangle((0, 0, width, height), outline=0, fill=BACKGROUND_COLOR)
 
-    # Define text content
-    confirm_text = "Press B again to confirm reset"
+        # Draw grid lines
+        for i in range(GRID_SIZE + 1):
+            # Vertical lines
+            x = offset_x + i * (TILE_SIZE + TILE_THICKNESS)
+            draw.rectangle([x, offset_y, x + TILE_THICKNESS, offset_y + TOTAL_GRID_SIZE], fill=GRID_COLOR)
 
-    # Calculate text size and position
-    bbox = draw.textbbox((0, 0), confirm_text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    text_x = (width - text_width) / 2
-    text_y = (height - text_height) / 2
+            # Horizontal lines
+            y = offset_y + i * (TILE_SIZE + TILE_THICKNESS)
+            draw.rectangle([offset_x, y, offset_x + TOTAL_GRID_SIZE, y + TILE_THICKNESS], fill=GRID_COLOR)
 
-    # Draw text
-    draw.text((text_x, text_y), confirm_text, font=font, fill=(255, 255, 255))
+        # Draw the blocks (tiles) based on the debug_grid
+        for row in range(GRID_SIZE):
+            for col in range(GRID_SIZE):
+                value = debug_grid[row][col]
+                if value != 0:
+                    # Calculate block position
+                    x_pos = offset_x + col * (TILE_SIZE + TILE_THICKNESS) + TILE_THICKNESS
+                    y_pos = offset_y + row * (TILE_SIZE + TILE_THICKNESS) + TILE_THICKNESS
 
-    # Update the display
-    disp.image(image)
+                    # Determine block color
+                    block_color = TILE_COLORS.get(value, (60, 58, 50))  # Default color if value exceeds 2048
 
-def draw_game_over_screen(won=False):
+                    # Draw the block rectangle
+                    draw.rectangle(
+                        [x_pos, y_pos, x_pos + TILE_SIZE, y_pos + TILE_SIZE],
+                        fill=block_color
+                    )
+
+                    # Draw the block value
+                    text = str(value)
+
+                    # Calculate text size and position using textbbox
+                    bbox = draw.textbbox((0, 0), text, font=font)
+                    text_width = bbox[2] - bbox[0]
+                    text_height = bbox[3] - bbox[1]
+
+                    text_x = x_pos + (TILE_SIZE - text_width) / 2
+                    text_y = y_pos + (TILE_SIZE - text_height) / 2
+
+                    # Choose text color based on tile value for better visibility
+                    if value <= 4:
+                        text_color = (119, 110, 101)  # Dark text
+                    else:
+                        text_color = (255, 255, 255)  # White text
+
+                    draw.text((text_x, text_y), text, font=font, fill=text_color)
+                    print(f"Tile drawn at ({row}, {col}) with value {value}.")
+
+        # Update the display with the drawn image
+        disp.image(image)
+        print("Debug Grid displayed successfully on the display.")
+        
+        # Print the grid to the terminal
+        print("Current Debug Grid State:")
+        print_grid(debug_grid)
+        
+    except Exception as e:
+        print("Error in draw_debug_grid:", e)
+        traceback.print_exc(file=sys.stdout)
+
+def print_grid(grid):
     """
-    Draws the game over screen showing the result and options.
+    Prints the 4x4 grid to the terminal in a formatted manner.
+    
+    Args:
+        grid (list of list of int): The 4x4 grid to print.
     """
-    # Clear the image buffer
-    draw.rectangle((0, 0, width, height), outline=0, fill=BACKGROUND_COLOR)
+    separator = "+----+----+----+----+"
+    print(separator)
+    for row in grid:
+        row_display = ""
+        for num in row:
+            if num != 0:
+                row_display += f"|{str(num).center(4)}"
+            else:
+                row_display += f"|    "
+        row_display += "|"
+        print(row_display)
+        print(separator)
 
-    # Define text content
-    if won:
-        result_text = "You Won!"
-    else:
-        result_text = "Game Over!"
-    high_score_text = f"High Score: {high_score}"
-    restart_option = "A: Restart Game"
-    main_menu_option = "B: Main Menu"
-
-    # Calculate positions with adequate spacing
-    current_y = height * 0.4  # Start from 40% of the screen height
-
-    # Draw Result Text
-    bbox = draw.textbbox((0, 0), result_text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    result_x = (width - text_width) / 2
-    result_y = current_y
-    draw.text((result_x, result_y), result_text, font=font, fill=(255, 255, 255))
-    current_y += text_height + 20
-
-    # Draw High Score
-    bbox = draw.textbbox((0, 0), high_score_text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    high_score_x = (width - text_width) / 2
-    high_score_y = current_y
-    draw.text((high_score_x, high_score_y), high_score_text, font=font, fill=(255, 255, 255))
-    current_y += text_height + 40
-
-    # Draw Restart Option
-    bbox = draw.textbbox((0, 0), restart_option, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    restart_x = (width - text_width) / 2
-    restart_y = current_y
-    draw.text((restart_x, restart_y), restart_option, font=font, fill=(0, 255, 0))  # Green for Restart
-    current_y += text_height + 20
-
-    # Draw Main Menu Option
-    bbox = draw.textbbox((0, 0), main_menu_option, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    main_menu_x = (width - text_width) / 2
-    main_menu_y = current_y
-    draw.text((main_menu_x, main_menu_y), main_menu_option, font=font, fill=(255, 0, 0))  # Red for Main Menu
-
-    # Update the display
-    disp.image(image)
-
-def draw_game():
+def log_button_press(button_name):
     """
-    Draws the 2048 game grid and blocks on the display.
+    Logs the button press to the terminal.
+    
+    Args:
+        button_name (str): The name of the button pressed.
     """
-    # Clear the image buffer
-    draw.rectangle((0, 0, width, height), outline=0, fill=BACKGROUND_COLOR)
+    print(f"Button '{button_name}' pressed.")
 
-    # Draw grid lines
-    for i in range(GRID_SIZE + 1):
-        # Vertical lines
-        x = offset_x + i * (TILE_SIZE + TILE_THICKNESS)
-        draw.rectangle([x, offset_y, x + TILE_THICKNESS, offset_y + TOTAL_GRID_SIZE], fill=GRID_COLOR)
-
-        # Horizontal lines
-        y = offset_y + i * (TILE_SIZE + TILE_THICKNESS)
-        draw.rectangle([offset_x, y, offset_x + TOTAL_GRID_SIZE, y + TILE_THICKNESS], fill=GRID_COLOR)
-
-    # Draw the blocks (tiles)
-    for row in range(GRID_SIZE):
-        for col in range(GRID_SIZE):
-            value = grid[row][col]
-            if value != 0:
-                # Calculate block position
-                x_pos = offset_x + col * (TILE_SIZE + TILE_THICKNESS) + TILE_THICKNESS
-                y_pos = offset_y + row * (TILE_SIZE + TILE_THICKNESS) + TILE_THICKNESS
-
-                # Determine block color
-                block_color = TILE_COLORS.get(value, (60, 58, 50))  # Default color if value exceeds 2048
-
-                # Draw the block rectangle
-                draw.rectangle(
-                    [x_pos, y_pos, x_pos + TILE_SIZE, y_pos + TILE_SIZE],
-                    fill=block_color
-                )
-
-                # Draw the block value
-                text = str(value)
-
-                # Calculate text size and position using textbbox
-                bbox = draw.textbbox((0, 0), text, font=font)
-                text_width = bbox[2] - bbox[0]
-                text_height = bbox[3] - bbox[1]
-
-                text_x = x_pos + (TILE_SIZE - text_width) / 2
-                text_y = y_pos + (TILE_SIZE - text_height) / 2
-
-                # Choose text color based on tile value for better visibility
-                if value <= 4:
-                    text_color = (119, 110, 101)  # Dark text
-                else:
-                    text_color = (255, 255, 255)  # White text
-
-                draw.text((text_x, text_y), text, font=font, fill=text_color)
-
-    # Draw game state
-    if game_state == 'WON':
-        status_text = "You Won!"
-    elif game_state == 'LOST':
-        status_text = "Game Over!"
-    else:
-        status_text = "Use Buttons to Play"
-
-    # Calculate status text position
-    bbox = draw.textbbox((0, 0), status_text, font=font)
-    status_width = bbox[2] - bbox[0]
-    status_height = bbox[3] - bbox[1]
-    status_x = (width - status_width) / 2
-    status_y = offset_y + TOTAL_GRID_SIZE + 20  # Positioned below the grid
-
-    draw.text((status_x, status_y), status_text, font=font, fill=(255, 255, 255))
-
-    # Draw scores
-    score_text = f"Score: {score}  High: {high_score}"
-    bbox = draw.textbbox((0, 0), score_text, font=font)
-    score_width = bbox[2] - bbox[0]
-    score_height = bbox[3] - bbox[1]
-    score_x = (width - score_width) / 2
-    score_y = offset_y - score_height - 10  # Positioned above the grid
-
-    draw.text((score_x, score_y), score_text, font=font, fill=(255, 255, 255))
-
-    # Update the display with the drawn image
-    disp.image(image)
-
-def reset_game():
-    global grid, game_state, score
-    grid = logic.start_game()
-    game_state = 'GAME NOT OVER'
-    score = 0
-    draw_game()
-
-def handle_main_menu_buttons():
-    global current_state
-    # Handle Start Game (Button A)
-    if not buttons['A'].value:
-        current_state = STATE_GAME
-        # Initialize game variables
-        reset_game()
-        time.sleep(DEBOUNCE_TIME)
-
-    # Handle Reset High Score (Button B)
-    if not buttons['B'].value:
-        current_state = STATE_RESET_CONFIRM
-        draw_reset_confirm()
-        time.sleep(DEBOUNCE_TIME)
-
-def handle_reset_confirm_buttons():
-    global high_score, current_state
-    # Confirm Reset (Button B)
-    if not buttons['B'].value:
-        high_score = 0
-        save_high_score(high_score)
-        current_state = STATE_MAIN_MENU
-        draw_main_menu()
-        time.sleep(DEBOUNCE_TIME)
-
-    # Optional: Cancel Reset (Button A)
-    elif not buttons['A'].value:
-        current_state = STATE_MAIN_MENU
-        draw_main_menu()
-        time.sleep(DEBOUNCE_TIME)
-
-def handle_game_over_buttons(won=False):
-    global current_state, score, grid, game_state
-    # Restart Game (Button A)
-    if not buttons['A'].value:
-        current_state = STATE_GAME
-        reset_game()
-        time.sleep(DEBOUNCE_TIME)
-
-    # Return to Main Menu (Button B)
-    if not buttons['B'].value:
-        current_state = STATE_MAIN_MENU
-        draw_main_menu()
-        time.sleep(DEBOUNCE_TIME)
-
-def handle_move(direction):
-    global grid, game_state, score, high_score
-    if game_state != 'GAME NOT OVER':
-        return
-    if direction == 'LEFT':
-        grid, changed, move_score = logic.move_left(grid)
-    elif direction == 'RIGHT':
-        grid, changed, move_score = logic.move_right(grid)
-    elif direction == 'UP':
-        grid, changed, move_score = logic.move_up(grid)
-    elif direction == 'DOWN':
-        grid, changed, move_score = logic.move_down(grid)
-    else:
-        return
-
-    if changed:
-        score += move_score
-        logic.add_new_2(grid)
-        if score > high_score:
-            high_score = score
-            save_high_score(high_score)
-    game_state = logic.get_current_state(grid)
-    draw_game()
-
-# Initial draw based on current state
+# Initial draw of the main menu
 draw_main_menu()
 
 # Debounce variables
 last_press_time = 0
 DEBOUNCE_TIME = 0.2  # seconds
 
-while True:
-    current_time = time.time()
+try:
+    while True:
+        current_time = time.time()
 
-    if current_state == STATE_MAIN_MENU:
-        handle_main_menu_buttons()
+        if current_state == STATE_MAIN_MENU:
+            # Handle Start Game (Button A)
+            if not buttons['A'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
+                print("Button A pressed: Starting game.")
+                current_state = STATE_GAME
+                # For debugging, draw the grid and print it to the terminal
+                draw_debug_grid()
+                last_press_time = current_time
 
-    elif current_state == STATE_RESET_CONFIRM:
-        handle_reset_confirm_buttons()
+            # Handle Reset High Score (Button B)
+            if not buttons['B'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
+                print("Button B pressed: Reset high score.")
+                current_state = STATE_RESET_CONFIRM
+                # Reset high score and redraw main menu
+                high_score = 0
+                save_high_score(high_score)
+                print("High score reset to 0.")
+                draw_main_menu()
+                last_press_time = current_time
 
-    elif current_state == STATE_GAME:
-        # During the game, handle button presses for movement
-        if not buttons['up'].value and current_time - last_press_time > DEBOUNCE_TIME:
-            handle_move('UP')
-            last_press_time = current_time
+        elif current_state == STATE_GAME:
+            # During the game, handle button presses for movement
+            # Since handle_move is removed, just log button presses
 
-        if not buttons['down'].value and current_time - last_press_time > DEBOUNCE_TIME:
-            handle_move('DOWN')
-            last_press_time = current_time
+            if not buttons['up'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
+                log_button_press('Up')
+                last_press_time = current_time
 
-        if not buttons['left'].value and current_time - last_press_time > DEBOUNCE_TIME:
-            handle_move('LEFT')
-            last_press_time = current_time
+            if not buttons['down'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
+                log_button_press('Down')
+                last_press_time = current_time
 
-        if not buttons['right'].value and current_time - last_press_time > DEBOUNCE_TIME:
-            handle_move('RIGHT')
-            last_press_time = current_time
+            if not buttons['left'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
+                log_button_press('Left')
+                last_press_time = current_time
 
-        if game_state in ['WON', 'LOST']:
-            current_state = STATE_GAME_OVER
-            draw_game_over_screen(won=(game_state == 'WON'))
+            if not buttons['right'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
+                log_button_press('Right')
+                last_press_time = current_time
 
-    elif current_state == STATE_GAME_OVER:
-        handle_game_over_buttons(won=(game_state == 'WON'))
+            # Handle Restart Game (Button A)
+            if not buttons['A'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
+                print("Button A pressed: Restarting game.")
+                current_state = STATE_GAME
+                # Redraw the debug grid and print it to the terminal
+                draw_debug_grid()
+                last_press_time = current_time
 
-    # Sleep to reduce CPU usage
-    time.sleep(0.05)
+            # Handle Return to Main Menu (Button B)
+            if not buttons['B'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
+                print("Button B pressed: Returning to main menu.")
+                current_state = STATE_MAIN_MENU
+                draw_main_menu()
+                last_press_time = current_time
+
+        elif current_state == STATE_RESET_CONFIRM:
+            # Since handle_move is removed, any confirmation actions are already done
+            # Just transition back to main menu
+            current_state = STATE_MAIN_MENU
+            draw_main_menu()
+
+        elif current_state == STATE_GAME_OVER:
+            # Since handle_move is removed, Game Over state isn't functional
+            # Just return to main menu
+            print("Game Over state detected, returning to main menu.")
+            current_state = STATE_MAIN_MENU
+            draw_main_menu()
+
+        # Sleep to reduce CPU usage
+        time.sleep(0.05)
+
+except KeyboardInterrupt:
+    print("Program terminated by user.")
+except Exception as e:
+    print("Unexpected error:", e)
+    traceback.print_exc(file=sys.stdout)

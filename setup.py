@@ -3,7 +3,7 @@
 import board
 import digitalio
 from digitalio import DigitalInOut, Direction, Pull
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from adafruit_rgb_display import st7789
 
 # Grid Parameters
@@ -41,6 +41,16 @@ def init_display():
         baudrate=BAUDRATE,
     )
     return disp
+
+# Define a font
+FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+FONT_SIZE = 24
+
+try:
+    font = ImageFont.truetype(FONT_PATH, FONT_SIZE)
+except IOError:
+    # Fallback to default font if the specified font is not found
+    font = ImageFont.load_default()
 
 # Backlight setup
 def init_backlight():
