@@ -36,7 +36,7 @@ MODULO_BLOCK_CHANCE = 0.1  # 10% chance of spawning a modulo block
 # Initialize block positions
 blocks = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]  # Empty grid
 
-# Adjusted directions due to display rotation
+# Adjusted directions due to display rotation (fixed inverted controls)
 DIRECTIONS = {
     "left": (0, 1),    # Left moves right in array indices (due to rotation)
     "right": (0, -1),  # Right moves left in array indices
