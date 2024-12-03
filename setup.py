@@ -37,6 +37,13 @@ def init_backlight():
 
 # Joystick input pins setup
 def init_buttons():
+    button_A = DigitalInOut(board.D5)
+    button_A.direction = Direction.INPUT
+    button_A.pull = Pull.UP
+
+    button_B = DigitalInOut(board.D6)
+    button_B.direction = Direction.INPUT
+    button_B.pull = Pull.UP
     button_L = DigitalInOut(board.D27)
     button_L.direction = Direction.INPUT
     button_L.pull = Pull.UP
@@ -54,6 +61,8 @@ def init_buttons():
     button_D.pull = Pull.UP
 
     return {
+        'A' : button_A,
+        'B' : button_B,
         'left': button_L,
         'right': button_R,
         'up': button_U,
