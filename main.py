@@ -9,6 +9,13 @@ import traceback
 from _pass import BoardEncoder  # Import BoardEncoder from _pass.py
 import numpy as np
 import sys  # For exception tracing
+import random
+import math  # For logarithm calculations
+
+# Add these global variables
+Z = random.randint(2, 9)  # Random Z between 2 and 9
+X = random.randint(2, 5)  # Random X between 2 and 5
+move_counter = 0  # Counter for key presses
 
 # Access hardware components from hardware_setup
 disp = hardware_setup.disp
@@ -203,7 +210,13 @@ def draw_debug_grid():
                     y1 = offset_y + i * (TILE_SIZE + TILE_THICKNESS) + TILE_THICKNESS
                     x2 = x1 + TILE_SIZE
                     y2 = y1 + TILE_SIZE
-                    tile_color = TILE_COLORS.get(value, (60, 58, 50))  # Default color if value not found
+                    #tile_color = TILE_COLORS.get(value, (60, 58, 50))  # Default color if value not found
+                    if value == -1:
+                        tile_color = (0, 0, 255)  # Blue color for Modulo Block
+                        text = "M"  # Indicate Modulo Block
+                    else:
+                        tile_color = TILE_COLORS.get(value, (60, 58, 50))  # Default color if value not found
+                        text = str(value)
                     draw.rectangle([x1, y1, x2, y2], fill=tile_color)
                     # Draw the number on the tile
                     text = str(value)
@@ -649,7 +662,7 @@ def handle_move(direction):
     """
     Handles the move logic based on the direction input.
     """
-    global grid, score, high_score, current_state
+    global grid, score, high_score, current_state, move_counter
 
     # Define movement functions
     def transpose(matrix):
@@ -663,15 +676,61 @@ def handle_move(direction):
         new_row = [num for num in row if num != 0]
         new_row += [0] * (GRID_SIZE - len(new_row))
         return new_row
-
+    """Merges the row after compression."""
+    """
     def merge(row):
-        """Merges the row after compression."""
+
+        
         global score  # Use global instead of nonlocal
         for i in range(GRID_SIZE - 1):
             if row[i] == row[i + 1] and row[i] != 0:
                 row[i] *= 2
                 row[i + 1] = 0
                 score += row[i]
+        return row
+        """
+    def merge(row):
+        global score, Z, X  # Ensure Z and X are global
+        i = 0
+        while i < GRID_SIZE - 1:
+            current = row[i]
+            next_tile = row[i + 1]
+            if current != 0 and next_tile != 0:
+                if current == -1 or next_tile == -1:
+                    # Modulo Block merging with a normal block
+                    if current == -1:
+                        modulo_block_index = i
+                        normal_block_index = i + 1
+                    else:
+                        modulo_block_index = i + 1
+                        normal_block_index = i
+                    Y = row[normal_block_index]
+                    print(f"Merging Modulo Block with normal block. Y={Y}, Z={Z}, X={X}")
+                    # Check if Z is zero
+                    if Z == 0:
+                        print("Error: Z is zero before modulo operation. Reinitializing Z.")
+                        Z = random.randint(3, 9)
+                    V = Y % Z
+                    if V == 0:
+                        V = Z  # Adjust V if necessary
+                    N = V * X
+                    if N < 1:
+                        N = 1
+                    n = int(round(math.log(N, 2)))
+                    merged_value = 2 ** n
+                    print(f"Modulo Merge: Y={Y}, V={V}, N={N}, Merged Value={merged_value}")
+                    # Update the grid
+                    row[modulo_block_index] = merged_value
+                    row[normal_block_index] = 0
+                    score += merged_value
+                    i += 1  # Skip next tile
+                elif current == next_tile:
+                    # Normal merge
+                    row[i] = current * 2
+                    row[i + 1] = 0
+                    score += row[i]
+                    i += 1  # Skip next tile
+            i += 1
         return row
 
     def move_left():
@@ -713,6 +772,13 @@ def handle_move(direction):
         add_random_tile()
         draw_debug_grid()
 
+        move_counter += 1
+        print(f"Move counter incremented to {move_counter}")
+
+        if move_counter % 4 == 0:
+            print("Spawning Modulo Block.")
+            add_modulo_block()
+
         if score > high_score:
             high_score = score
             save_high_score(high_score)
@@ -731,11 +797,24 @@ def handle_move(direction):
     else:
         print(f"Move '{direction}' did not change the grid.")
 
+def add_modulo_block():
+    """
+    Adds a Modulo Block (-1) to a random empty spot on the board.
+    """
+    empty_cells = [(i, j) for i in range(GRID_SIZE) for j in range(GRID_SIZE) if grid[i][j] == 0]
+    if not empty_cells:
+        print("No empty cells to spawn Modulo Block.")
+        return
+    i, j = random.choice(empty_cells)
+    grid[i][j] = -1  # Use -1 to represent Modulo Block
+    print(f"Modulo Block added at position ({i}, {j}).")
+
+
 def check_game_state():
     """
     Checks the current game state: WON, LOST, or GAME_NOT_OVER.
     """
-    # Check for a winning tile
+    # Check for a winning tile (excluding Modulo Blocks)
     for row in grid:
         if 2048 in row:
             return 'WON'
@@ -748,17 +827,18 @@ def check_game_state():
     # Check for possible merges horizontally
     for row in grid:
         for i in range(len(row)-1):
-            if row[i] == row[i+1]:
+            if (row[i] == row[i+1] and row[i] != -1) or row[i] == -1 or row[i+1] == -1:
                 return 'GAME_NOT_OVER'
 
     # Check for possible merges vertically
     for col in range(GRID_SIZE):
-        for row in range(len(grid)-1):
-            if grid[row][col] == grid[row+1][col]:
+        for row_idx in range(len(grid)-1):
+            if (grid[row_idx][col] == grid[row_idx+1][col] and grid[row_idx][col] != -1) or grid[row_idx][col] == -1 or grid[row_idx+1][col] == -1:
                 return 'GAME_NOT_OVER'
 
     # No moves left
     return 'LOST'
+
 
 def initialize_game():
     """
@@ -776,6 +856,9 @@ def initialize_game():
     right_press_count = 0
     password_input = "AAAAAAAAAA"  # Reset to initial password
     current_selection = 0
+    Z = random.randint(3, 9)  # Random Z between 3 and 9
+    X = random.randint(2, 5)  # Random X between 2 and 5
+    print(f"Game initialized with Z={Z} and X={X}")
     print("Initializing game grid.")
     add_random_tile()
     add_random_tile()
