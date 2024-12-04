@@ -157,9 +157,9 @@ def print_debug_grid():
         print("|", end="")
         for cell in row:
             if cell == 0:
-                print(f" {'.':<4}|", end="")  # Represent empty cells with '.'
+                print(f" {'.':<5}|", end="")  # Represent empty cells with '.'
             else:
-                print(f" {cell:<4}|", end="")
+                print(f" {cell:<5}|", end="")
         print()
     print("+------+------+------+------+")
     print(f"Score: {score}  High Score: {high_score}\n")
@@ -312,7 +312,7 @@ def draw_game_over_screen(won=False):
 
         # Define text content
         result_text = "You Won!" if won else "Game Over!"
-        high_score_text = f"High Score: {high_score}"
+        high_score_text = f"Your Score: {score}"
         restart_option = "A: Restart Game"
         main_menu_option = "B: Main Menu"
 
@@ -991,7 +991,7 @@ try:
                     print("Incomplete password. Please enter a 10-character password.")
                     draw_error_message("Incomplete Password!")
                     last_press_time = current_time
-                        
+
             # Handle Cancel (Button B to return to Main Menu)
             elif not buttons['B'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
                 print("Button B pressed: Returning to Main Menu from Password Input Screen.")

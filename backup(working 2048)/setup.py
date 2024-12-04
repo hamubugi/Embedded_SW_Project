@@ -69,6 +69,10 @@ def init_buttons():
     button_B.direction = Direction.INPUT
     button_B.pull = Pull.UP
 
+    button_C = DigitalInOut(board.D4)
+    button_C.direction = Direction.INPUT
+    button_C.pull = Pull.UP
+
     button_L = DigitalInOut(board.D27)
     button_L.direction = Direction.INPUT
     button_L.pull = Pull.UP
@@ -88,6 +92,7 @@ def init_buttons():
     return {
         'A': button_A,
         'B': button_B,
+        'C': button_C,
         'left': button_L,
         'right': button_R,
         'up': button_U,
