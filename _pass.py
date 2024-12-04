@@ -1,52 +1,64 @@
 import random
 import numpy as np
 
+# _pass.py
+
+import numpy as np
+
+# _pass.py
+
+import numpy as np
+
 class BoardEncoder:
     def __init__(self):
-        self.CHARSET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+        self.CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+        self.TILE_VALUES = [0, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]  # Include 0
         self.BASE = len(self.CHARSET)
-        # Tile values from 2^1 to 2^10
-        self.TILE_VALUES = [2**i for i in range(1, 11)]
 
     def board_to_number(self, board):
-        """
-        Convert a 4x4 board to a unique number
-        
-        Args:
-            board (numpy.ndarray): 4x4 board with values from 2^1 to 2^10
-        
-        Returns:
-            int: Unique number representation of the board
-        """
         number = 0
-        for row in board:
-            for cell in row:
-                # Find the index of the cell value in TILE_VALUES
-                tile_index = self.TILE_VALUES.index(cell)
-                # Shift and add
-                number = number * len(self.TILE_VALUES) + tile_index
+        total_tiles = len(self.TILE_VALUES)
+        for cell in board.flatten():
+            tile_index = self.TILE_VALUES.index(cell)
+            number = number * total_tiles + tile_index
         return number
 
     def number_to_board(self, number):
-        """
-        Reconstruct a board from a unique number
-        
-        Args:
-            number (int): Unique number representation of the board
-        
-        Returns:
-            numpy.ndarray: 4x4 board with values from 2^1 to 2^10
-        """
-        board = np.zeros((4, 4), dtype=int)
-        for i in range(3, -1, -1):
-            for j in range(3, -1, -1):
-                # Get the tile index
-                tile_index = number % len(self.TILE_VALUES)
-                # Convert index back to tile value
-                board[i, j] = self.TILE_VALUES[tile_index]
-                # Shift number
-                number //= len(self.TILE_VALUES)
+        indices = []
+        total_tiles = len(self.TILE_VALUES)
+        while len(indices) < 16:
+            indices.append(number % total_tiles)
+            number = number // total_tiles
+        indices.reverse()
+        board = np.array([self.TILE_VALUES[index] for index in indices])
+        return board.reshape((4, 4))
+
+    def encode(self, number):
+        chars = []
+        while number > 0:
+            chars.append(self.CHARSET[number % self.BASE])
+            number = number // self.BASE
+        # Pad the password to ensure it is always 10 characters long
+        while len(chars) < 10:
+            chars.append(self.CHARSET[0])
+        return ''.join(reversed(chars))
+
+    def decode(self, password):
+        number = 0
+        for char in password:
+            number = number * self.BASE + self.CHARSET.index(char)
+        return number
+
+    def save_board_to_password(self, board):
+        board_number = self.board_to_number(board)
+        password = self.encode(board_number)
+        return password
+
+    def load_board_from_password(self, password):
+        board_number = self.decode(password)
+        board = self.number_to_board(board_number)
         return board
+
 
     def encode(self, number):
         """

@@ -124,12 +124,15 @@ score = 0
 last_press_time = 0
 DEBOUNCE_TIME = 0.2  # seconds
 
+# Define SEQUENCE_THRESHOLD globally
+SEQUENCE_THRESHOLD = 16  # Number of consecutive presses to trigger debug commands
+
 # Initialize press counts
 left_press_count = 0
 right_press_count = 0
 
-# Initialize Password Variables
-password_input = ""
+# Initialize Password VariablesP
+password_input = "AAAAAAAAAA"  # Initialize to "AAAAAAAAAA"
 current_selection = 0  # Index for password input (0 to 9)
 
 # Helper Functions
@@ -220,7 +223,9 @@ def draw_debug_grid():
         traceback.print_exc(file=sys.stdout)
 
 def draw_main_menu():
-    global high_score  # Ensure high_score is accessible
+    """
+    Draws the main menu screen with game rules, high score, and options.
+    """
     try:
         print("Drawing Main Menu...")
         # Clear the background
@@ -228,59 +233,60 @@ def draw_main_menu():
         print("Background cleared.")
 
         # Define text content
-        title_text = "2048 Game"
-        rules_text = "Swipe tiles to combine\nand reach 2048!"
+        title_text = "Modulo 2048"
+        rules_text = "" #"Swipe tiles to combine\nand reach 2048!"
         high_score_text = f"High Score: {high_score}"
         start_option = "A: Start Game"
-        reset_option = "B: Reset High Score"
-        password_option = "C: Load Password"
+        reset_option = "B: Reset Score"
 
-        # Approximate character width and height
-        average_char_width = 8
-        average_char_height = 20
-
-        # Define positions
-        margin_top = 10
-        spacing = 20
-        current_y = margin_top
+        # Define positions with appropriate y-coordinates
+        margin_top = 10  # Top margin in pixels
+        spacing = 20      # Spacing between elements in pixels
 
         # Draw Title
-        title_x = (width - len(title_text) * average_char_width) / 2
-        draw.text((title_x, current_y), title_text, font=font, fill=(255, 255, 255))
-        print(f"Title '{title_text}' drawn at ({title_x}, {current_y}).")
-        current_y += average_char_height + spacing
+        title_bbox = draw.textbbox((0, 0), title_text, font=font)
+        title_width = title_bbox[2] - title_bbox[0]
+        title_height = title_bbox[3] - title_bbox[1]
+        title_x = (width - title_width) / 2
+        title_y = margin_top
+        draw.text((title_x, title_y), title_text, font=font, fill=(255, 255, 255))
+        print(f"Title '{title_text}' drawn at ({title_x}, {title_y}).")
 
         # Draw Rules
-        lines = rules_text.split('\n')
-        for line in lines:
-            line_x = (width - len(line) * average_char_width) / 2
-            draw.text((line_x, current_y), line, font=font, fill=(255, 255, 255))
-            print(f"Instruction '{line}' drawn at ({line_x}, {current_y}).")
-            current_y += average_char_height + 5  # Small spacing between lines
-        current_y += spacing
+        rules_bbox = draw.textbbox((0, 0), rules_text, font=font)
+        rules_width = rules_bbox[2] - rules_bbox[0]
+        rules_height = rules_bbox[3] - rules_bbox[1]
+        rules_x = (width - rules_width) / 2
+        rules_y = title_y + title_height + spacing
+        draw.multiline_text((rules_x, rules_y), rules_text, font=font, fill=(255, 255, 255), align="center")
+        print(f"Rules drawn at ({rules_x}, {rules_y}).")
 
         # Draw High Score
-        high_score_x = (width - len(high_score_text) * average_char_width) / 2
-        draw.text((high_score_x, current_y), high_score_text, font=font, fill=(255, 255, 255))
-        print(f"High Score '{high_score_text}' drawn at ({high_score_x}, {current_y}).")
-        current_y += average_char_height + spacing
+        high_score_bbox = draw.textbbox((0, 0), high_score_text, font=font)
+        high_score_width = high_score_bbox[2] - high_score_bbox[0]
+        high_score_height = high_score_bbox[3] - high_score_bbox[1]
+        high_score_x = (width - high_score_width) / 2
+        high_score_y = rules_y + rules_height + spacing
+        draw.text((high_score_x, high_score_y), high_score_text, font=font, fill=(255, 255, 255))
+        print(f"High Score '{high_score_text}' drawn at ({high_score_x}, {high_score_y}).")
 
         # Draw Start Option
-        start_x = (width - len(start_option) * average_char_width) / 2
-        draw.text((start_x, current_y), start_option, font=font, fill=(0, 255, 0))  # Green for Start
-        print(f"Start Option '{start_option}' drawn at ({start_x}, {current_y}).")
-        current_y += average_char_height + spacing
+        start_bbox = draw.textbbox((0, 0), start_option, font=font)
+        start_width = start_bbox[2] - start_bbox[0]
+        start_height = start_bbox[3] - start_bbox[1]
+        start_x = (width - start_width) / 2
+        start_y = high_score_y + high_score_height + spacing
+        draw.text((start_x, start_y), start_option, font=font, fill=(0, 255, 0))  # Green for Start
+        print(f"Start Option '{start_option}' drawn at ({start_x}, {start_y}).")
 
         # Draw Reset Option
-        reset_x = (width - len(reset_option) * average_char_width) / 2
-        draw.text((reset_x, current_y), reset_option, font=font, fill=(255, 0, 0))  # Red for Reset
-        print(f"Reset Option '{reset_option}' drawn at ({reset_x}, {current_y}).")
-        current_y += average_char_height + spacing
-
-        # Draw Password Option
-        password_x = (width - len(password_option) * average_char_width) / 2
-        draw.text((password_x, current_y), password_option, font=font, fill=(0, 0, 255))  # Blue for Password
-        print(f"Password Option '{password_option}' drawn at ({password_x}, {current_y}).")
+        reset_bbox = draw.textbbox((0, 0), reset_option, font=font)
+        reset_width = reset_bbox[2] - reset_bbox[0]
+        reset_height = reset_bbox[3] - reset_bbox[1]
+        reset_x = (width - reset_width) / 2
+        reset_y = start_y + start_height + spacing
+        draw.text((reset_x, reset_y), reset_option, font=font, fill=(255, 0, 0))  # Red for Reset
+        print(f"Reset Option '{reset_option}' drawn at ({reset_x}, {reset_y}).")
 
         # Update the display
         disp.image(image)
@@ -289,8 +295,15 @@ def draw_main_menu():
         print("Error in draw_main_menu:", e)
         traceback.print_exc(file=sys.stdout)
 
+
+
 def draw_game_over_screen(won=False):
-    global high_score  # Ensure high_score is accessible
+    """
+    Draws the Game Over screen indicating whether the player has won or lost.
+    
+    Args:
+        won (bool): True if the player has won, False otherwise.
+    """
     try:
         print("Drawing Game Over Screen...")
         # Clear the background
@@ -303,37 +316,45 @@ def draw_game_over_screen(won=False):
         restart_option = "A: Restart Game"
         main_menu_option = "B: Main Menu"
 
-        # Approximate character width and height
-        average_char_width = 8
-        average_char_height = 20
-
-        # Define positions
-        margin_top = 10
-        spacing = 20
-        current_y = margin_top
+        # Define positions with appropriate y-coordinates
+        margin_top = 10  # Top margin
+        spacing = 20      # Spacing between elements
 
         # Draw Result Text
-        result_x = (width - len(result_text) * average_char_width) / 2
-        draw.text((result_x, current_y), result_text, font=font, fill=(255, 255, 255))
-        print(f"Result text '{result_text}' drawn at ({result_x}, {current_y}).")
-        current_y += average_char_height + spacing
+        result_bbox = draw.textbbox((0, 0), result_text, font=font)
+        result_width = result_bbox[2] - result_bbox[0]
+        result_height = result_bbox[3] - result_bbox[1]
+        result_x = (width - result_width) / 2
+        result_y = margin_top
+        draw.text((result_x, result_y), result_text, font=font, fill=(255, 255, 255))
+        print(f"Result text '{result_text}' drawn at ({result_x}, {result_y}).")
 
         # Draw High Score
-        high_score_x = (width - len(high_score_text) * average_char_width) / 2
-        draw.text((high_score_x, current_y), high_score_text, font=font, fill=(255, 255, 255))
-        print(f"High score text '{high_score_text}' drawn at ({high_score_x}, {current_y}).")
-        current_y += average_char_height + spacing
+        high_score_bbox = draw.textbbox((0, 0), high_score_text, font=font)
+        high_score_width = high_score_bbox[2] - high_score_bbox[0]
+        high_score_height = high_score_bbox[3] - high_score_bbox[1]
+        high_score_x = (width - high_score_width) / 2
+        high_score_y = result_y + result_height + spacing
+        draw.text((high_score_x, high_score_y), high_score_text, font=font, fill=(255, 255, 255))
+        print(f"High Score '{high_score_text}' drawn at ({high_score_x}, {high_score_y}).")
 
         # Draw Restart Option
-        restart_x = (width - len(restart_option) * average_char_width) / 2
-        draw.text((restart_x, current_y), restart_option, font=font, fill=(0, 255, 0))  # Green for Restart
-        print(f"Restart option '{restart_option}' drawn at ({restart_x}, {current_y}).")
-        current_y += average_char_height + spacing
+        restart_bbox = draw.textbbox((0, 0), restart_option, font=font)
+        restart_width = restart_bbox[2] - restart_bbox[0]
+        restart_height = restart_bbox[3] - restart_bbox[1]
+        restart_x = (width - restart_width) / 2
+        restart_y = high_score_y + high_score_height + spacing
+        draw.text((restart_x, restart_y), restart_option, font=font, fill=(0, 255, 0))  # Green for Restart
+        print(f"Restart Option '{restart_option}' drawn at ({restart_x}, {restart_y}).")
 
         # Draw Main Menu Option
-        main_menu_x = (width - len(main_menu_option) * average_char_width) / 2
-        draw.text((main_menu_x, current_y), main_menu_option, font=font, fill=(255, 0, 0))  # Red for Main Menu
-        print(f"Main Menu option '{main_menu_option}' drawn at ({main_menu_x}, {current_y}).")
+        main_menu_bbox = draw.textbbox((0, 0), main_menu_option, font=font)
+        main_menu_width = main_menu_bbox[2] - main_menu_bbox[0]
+        main_menu_height = main_menu_bbox[3] - main_menu_bbox[1]
+        main_menu_x = (width - main_menu_width) / 2
+        main_menu_y = restart_y + restart_height + spacing
+        draw.text((main_menu_x, main_menu_y), main_menu_option, font=font, fill=(255, 0, 0))  # Red for Main Menu
+        print(f"Main Menu Option '{main_menu_option}' drawn at ({main_menu_x}, {main_menu_y}).")
 
         # Update the display
         disp.image(image)
@@ -341,6 +362,7 @@ def draw_game_over_screen(won=False):
     except Exception as e:
         print("Error in draw_game_over_screen:", e)
         traceback.print_exc(file=sys.stdout)
+
 
 def draw_how_to_play():
     try:
@@ -362,9 +384,9 @@ def draw_how_to_play():
         average_char_width = 8
         average_char_height = 20
 
-        # Define positions
-        margin_top = 10
-        spacing = 20
+        # Define positions using percentages for better alignment
+        margin_top = height * 0.05  # 5% from top
+        spacing = height * 0.05  # 5% spacing
         current_y = margin_top
 
         # Draw Title
@@ -388,7 +410,6 @@ def draw_how_to_play():
         traceback.print_exc(file=sys.stdout)
 
 def draw_password_load_screen():
-    global password_input, current_selection
     """
     Draws the Password Load screen accessed from the Main Menu.
     """
@@ -399,55 +420,69 @@ def draw_password_load_screen():
         print("Background cleared.")
 
         # Define text content
-        title_text = "Load Game via Password"
-        instructions = [
-            "Use Up/Down to change character.",
-            "Use Left/Right to navigate positions.",
-            "Press C to confirm.",
-            "Press C again to cancel."
-        ]
+        title_text = "Enter"
+        subtitle_text = "password"
+        prompt_text = "Password:"
+        password_display = password_input  
 
-        # Ensure password_input is 10 characters
-        if len(password_input) < 10:
-            password_input += encoder.CHARSET[0] * (10 - len(password_input))
-        current_password = password_input
-
-        # Approximate character width and height
-        average_char_width = 8
-        average_char_height = 20
-
-        # Define positions
-        margin_top = 10
-        spacing = 20
-        current_y = margin_top
+        # Define positions with appropriate y-coordinates
+        margin_top = 10  # Top margin
+        spacing = 20      # Spacing between elements
 
         # Draw Title
-        title_x = (width - len(title_text) * average_char_width) / 2
-        draw.text((title_x, current_y), title_text, font=font, fill=(255, 255, 255))
-        print(f"Title '{title_text}' drawn at ({title_x}, {current_y}).")
-        current_y += average_char_height + spacing
+        title_bbox = draw.textbbox((0, 0), title_text, font=font)
+        title_width = title_bbox[2] - title_bbox[0]
+        title_height = title_bbox[3] - title_bbox[1]
+        title_x = (width - title_width) / 2
+        title_y = margin_top
+        draw.text((title_x, title_y), title_text, font=font, fill=(255, 255, 255))
+        print(f"Title '{title_text}' drawn at ({title_x}, {title_y}).")
 
-        # Draw Instructions
-        for line in instructions:
-            line_x = (width - len(line) * average_char_width) / 2
-            draw.text((line_x, current_y), line, font=font, fill=(255, 255, 255))
-            print(f"Instruction '{line}' drawn at ({line_x}, {current_y}).")
-            current_y += average_char_height + 5  # Small spacing between lines
+        # Draw Subtitle
+        subtitle_bbox = draw.textbbox((0, 0), subtitle_text, font=font)
+        subtitle_width = subtitle_bbox[2] - subtitle_bbox[0]
+        subtitle_height = subtitle_bbox[3] - subtitle_bbox[1]
+        subtitle_x = (width - subtitle_width) / 2
+        subtitle_y = title_y + title_height + spacing
+        draw.text((subtitle_x, subtitle_y), subtitle_text, font=font, fill=(255, 255, 255))
+        print(f"Subtitle '{subtitle_text}' drawn at ({subtitle_x}, {subtitle_y}).")
 
-        # Draw Current Password
-        password_text = "Password: " + ''.join(current_password)
-        password_x = (width - len(password_text) * average_char_width) / 2
-        draw.text((password_x, current_y + 20), password_text, font=font, fill=(0, 255, 0))
-        print(f"Password '{password_text}' drawn at ({password_x}, {current_y + 20}).")
+        # Draw Prompt Text
+        prompt_bbox = draw.textbbox((0, 0), prompt_text, font=font)
+        prompt_width = prompt_bbox[2] - prompt_bbox[0]
+        prompt_height = prompt_bbox[3] - prompt_bbox[1]
+        prompt_x = (width - prompt_width) / 2
+        prompt_y = subtitle_y + subtitle_height + spacing
+        draw.text((prompt_x, prompt_y), prompt_text, font=font, fill=(255, 255, 255))
+        print(f"Prompt '{prompt_text}' drawn at ({prompt_x}, {prompt_y}).")
 
-        # Highlight Current Selection
-        # Calculate position of current character
-        char_width = average_char_width
-        char_x_start = password_x + len("Password: ") * char_width
-        char_y = current_y + 20
-        char_x = char_x_start + (current_selection * char_width)
-        draw.rectangle([char_x - 2, char_y - 2, char_x + char_width, char_y + average_char_height - 8], outline=(255, 0, 0), width=2)
-        print(f"Current selection highlighted at index {current_selection}.")
+        # Draw Password
+        password_bbox = draw.textbbox((0, 0), password_display, font=font)
+        password_width = password_bbox[2] - password_bbox[0]
+        password_height = password_bbox[3] - password_bbox[1]
+        password_x = (width - password_width) / 2
+        password_y = prompt_y + prompt_height + 10  # Slight spacing before password
+        draw.text((password_x, password_y), password_display, font=font, fill=(0, 255, 0))
+        print(f"Password '{password_display}' drawn at ({password_x}, {password_y}).")
+
+        # Highlight Current Selection (if applicable)
+        # Assuming you have a mechanism to highlight the current character
+        # Here's a simple example for highlighting the first character
+        # You can modify this based on your implementation
+        if 0 <= current_selection < len(password_display):
+            selected_char_x = password_x + (current_selection * (password_width / len(password_display)))
+            selected_char_y = password_y
+            draw.rectangle(
+                [
+                    selected_char_x - 2,
+                    selected_char_y - 2,
+                    selected_char_x + (password_width / len(password_display)) + 2,
+                    selected_char_y + password_height + 2
+                ],
+                outline=(255, 0, 0),
+                width=2
+            )
+            print(f"Current selection highlighted at index {current_selection}.")
 
         # Update the display
         disp.image(image)
@@ -457,7 +492,6 @@ def draw_password_load_screen():
         traceback.print_exc(file=sys.stdout)
 
 def draw_password_save_screen():
-    global password_input
     """
     Draws the Password Save screen accessed during gameplay.
     """
@@ -468,44 +502,40 @@ def draw_password_save_screen():
         print("Background cleared.")
 
         # Define text content
-        title_text = "Save Game via Password"
-        instructions = [
-            "Press C to confirm.",
-            "Press C again to cancel."
-        ]
+        title_text = "Save Game"
+        prompt_text = "Password:"
+        password_display = password_input  # Should be the generated password
 
-        # Encode current board to password
-        password_input = encoder.save_board_to_password(np.array(grid))
-        current_password = password_input
-        print(f"Board saved as password: {current_password}")
-
-        # Approximate character width and height
-        average_char_width = 8
-        average_char_height = 20
-
-        # Define positions
-        margin_top = 10
-        spacing = 20
-        current_y = margin_top
+        # Define positions with appropriate y-coordinates
+        margin_top = 10  # Top margin
+        spacing = 20      # Spacing between elements
 
         # Draw Title
-        title_x = (width - len(title_text) * average_char_width) / 2
-        draw.text((title_x, current_y), title_text, font=font, fill=(255, 255, 255))
-        print(f"Title '{title_text}' drawn at ({title_x}, {current_y}).")
-        current_y += average_char_height + spacing
+        title_bbox = draw.textbbox((0, 0), title_text, font=font)
+        title_width = title_bbox[2] - title_bbox[0]
+        title_height = title_bbox[3] - title_bbox[1]
+        title_x = (width - title_width) / 2
+        title_y = margin_top
+        draw.text((title_x, title_y), title_text, font=font, fill=(255, 255, 255))
+        print(f"Title '{title_text}' drawn at ({title_x}, {title_y}).")
 
-        # Draw Instructions
-        for line in instructions:
-            line_x = (width - len(line) * average_char_width) / 2
-            draw.text((line_x, current_y), line, font=font, fill=(255, 255, 255))
-            print(f"Instruction '{line}' drawn at ({line_x}, {current_y}).")
-            current_y += average_char_height + 5  # Small spacing between lines
+        # Draw Prompt Text
+        prompt_bbox = draw.textbbox((0, 0), prompt_text, font=font)
+        prompt_width = prompt_bbox[2] - prompt_bbox[0]
+        prompt_height = prompt_bbox[3] - prompt_bbox[1]
+        prompt_x = (width - prompt_width) / 2
+        prompt_y = title_y + title_height + spacing
+        draw.text((prompt_x, prompt_y), prompt_text, font=font, fill=(255, 255, 255))
+        print(f"Prompt '{prompt_text}' drawn at ({prompt_x}, {prompt_y}).")
 
-        # Draw Generated Password
-        password_text = "Password: " + ''.join(current_password)
-        password_x = (width - len(password_text) * average_char_width) / 2
-        draw.text((password_x, current_y + 20), password_text, font=font, fill=(0, 255, 0))
-        print(f"Password '{password_text}' drawn at ({password_x}, {current_y + 20}).")
+        # Draw Password
+        password_bbox = draw.textbbox((0, 0), password_display, font=font)
+        password_width = password_bbox[2] - password_bbox[0]
+        password_height = password_bbox[3] - password_bbox[1]
+        password_x = (width - password_width) / 2
+        password_y = prompt_y + prompt_height + 10  # Slight spacing before password
+        draw.text((password_x, password_y), password_display, font=font, fill=(0, 255, 0))
+        print(f"Password '{password_display}' drawn at ({password_x}, {password_y}).")
 
         # Update the display
         disp.image(image)
@@ -513,6 +543,7 @@ def draw_password_save_screen():
     except Exception as e:
         print("Error in draw_password_save_screen:", e)
         traceback.print_exc(file=sys.stdout)
+
 
 def scroll_password(direction='UP'):
     """
@@ -558,6 +589,61 @@ def calculate_score_from_board(board):
     """
     # Example: Sum of all tile values
     return int(np.sum(board))
+
+def draw_error_message(message):
+    """
+    Draws an error message on the screen.
+    
+    Args:
+        message (str): The error message to display.
+    """
+    try:
+        print(f"Displaying error message: {message}")
+        # Clear the background
+        draw.rectangle((0, 0, width, height), outline=0, fill=BACKGROUND_COLOR)
+        print("Background cleared.")
+
+        # Define positions
+        margin_top = (height - 40) / 2  # Center vertically for a 40-pixel high box
+        box_height = 40
+        box_width = len(message) * 10  # Approximate width based on message length
+        box_x = (width - box_width) / 2
+        box_y = margin_top
+
+        # Draw a semi-transparent rectangle as a backdrop for the message
+        draw.rectangle(
+            [box_x - 10, box_y - 10, box_x + box_width + 10, box_y + box_height + 10],
+            fill=(50, 50, 50)
+        )
+        print(f"Error box drawn at ({box_x - 10}, {box_y - 10}) to ({box_x + box_width + 10}, {box_y + box_height + 10}).")
+
+        # Draw the error message text
+        message_bbox = draw.textbbox((0, 0), message, font=font)
+        message_width = message_bbox[2] - message_bbox[0]
+        message_height = message_bbox[3] - message_bbox[1]
+        message_x = (width - message_width) / 2
+        message_y = box_y + (box_height - message_height) / 2
+        draw.text((message_x, message_y), message, font=font, fill=(255, 0, 0))  # Red color for errors
+        print(f"Error message '{message}' drawn at ({message_x}, {message_y}).")
+
+        # Update the display
+        disp.image(image)
+        print(f"Error message '{message}' displayed successfully.")
+
+        # Wait for a short duration before returning to the previous screen
+        time.sleep(2)  # Display the message for 2 seconds
+
+        # After displaying the message, return to the appropriate state
+        if current_state == STATE_PASSWORD_LOAD:
+            draw_password_load_screen()
+        elif current_state == STATE_PASSWORD_SAVE:
+            draw_password_save_screen()
+        else:
+            draw_main_menu()
+    except Exception as e:
+        print("Error in draw_error_message:", e)
+        traceback.print_exc(file=sys.stdout)
+
 
 def handle_move(direction):
     """
@@ -688,18 +774,12 @@ def initialize_game():
     score = 0
     left_press_count = 0
     right_press_count = 0
-    password_input = ""
+    password_input = "AAAAAAAAAA"  # Reset to initial password
     current_selection = 0
     print("Initializing game grid.")
     add_random_tile()
     add_random_tile()
     draw_debug_grid()
-
-def log_button_press(button_name):
-    """
-    Logs the button press to the terminal.
-    """
-    print(f"Button '{button_name}' pressed.")
 
 # Main Game Loop
 try:
@@ -719,20 +799,24 @@ try:
 
             # Handle Reset High Score (Button B)
             if not buttons['B'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
-                print("Button B pressed: Reset high score.")
-                current_state = STATE_RESET_CONFIRM
-                # Reset high score and redraw main menu
-                high_score = 0
-                save_high_score(high_score)
-                print("High score reset to 0.")
-                draw_main_menu()
-                last_press_time = current_time
+                try:
+                    print("Button B pressed: Reset high score.")
+                    current_state = STATE_RESET_CONFIRM
+                    # Reset high score and redraw main menu
+                    high_score = 0
+                    save_high_score(high_score)
+                    print("High score reset to 0.")
+                    draw_main_menu()
+                    last_press_time = current_time
+                except Exception as e:
+                    print("Error resetting high score:", e)
+                    traceback.print_exc(file=sys.stdout)
 
             # Handle Password Load (Button C from Main Menu)
             if not buttons['C'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
                 print("Button C pressed: Entering Password Load Mode.")
                 current_state = STATE_PASSWORD_LOAD
-                password_input = ""
+                password_input = "AAAAAAAAAA"  
                 current_selection = 0
                 draw_password_load_screen()
                 last_press_time = current_time
@@ -790,6 +874,8 @@ try:
             if not buttons['C'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
                 print("Button C pressed: Entering Password Save Mode.")
                 current_state = STATE_PASSWORD_SAVE
+                # Generate the password before drawing the screen
+                password_input = encoder.save_board_to_password(np.array(grid))
                 draw_password_save_screen()
                 last_press_time = current_time
 
@@ -805,13 +891,17 @@ try:
 
             # Handle Return to Main Menu (Button B)
             if not buttons['B'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
-                print("Button B pressed: Returning to main menu.")
-                current_state = STATE_MAIN_MENU
-                draw_main_menu()
-                # Reset press counters when returning to main menu
-                left_press_count = 0
-                right_press_count = 0
-                last_press_time = current_time
+                try:
+                    print("Button B pressed: Returning to main menu.")
+                    current_state = STATE_MAIN_MENU
+                    draw_main_menu()
+                    # Reset press counters when returning to main menu
+                    left_press_count = 0
+                    right_press_count = 0
+                    last_press_time = current_time
+                except Exception as e:
+                    print("Error returning to main menu:", e)
+                    traceback.print_exc(file=sys.stdout)
 
         elif current_state == STATE_RESET_CONFIRM:
             # Any confirmation actions are already done
@@ -831,21 +921,25 @@ try:
 
             # Handle Return to Main Menu (Button B)
             if not buttons['B'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
-                print("Button B pressed: Returning to main menu.")
-                current_state = STATE_MAIN_MENU
-                draw_main_menu()
-                last_press_time = current_time
+                try:
+                    print("Button B pressed: Returning to main menu.")
+                    current_state = STATE_MAIN_MENU
+                    draw_main_menu()
+                    last_press_time = current_time
+                except Exception as e:
+                    print("Error returning to main menu:", e)
+                    traceback.print_exc(file=sys.stdout)
 
         elif current_state == STATE_PASSWORD_LOAD:
             # Handle Up Button Press
             if not buttons['up'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
-                password_input = scroll_password(direction='UP')
+                scroll_password(direction='UP')
                 draw_password_load_screen()
                 last_press_time = current_time
 
             # Handle Down Button Press
             if not buttons['down'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
-                password_input = scroll_password(direction='DOWN')
+                scroll_password(direction='DOWN')
                 draw_password_load_screen()
                 last_press_time = current_time
 
@@ -871,35 +965,42 @@ try:
                         loaded_number = encoder.decode(password_input)
                         loaded_board = encoder.number_to_board(loaded_number)
                         # Update the game grid
-                        grid = loaded_board.tolist()  # Convert numpy array to list
-                        # Update the score appropriately
-                        score = calculate_score_from_board(loaded_board)
-                        print("Board loaded from password.")
-                        # Transition back to game
-                        current_state = STATE_GAME
-                        draw_debug_grid()
+                        if np.any(loaded_board == 2048):
+                            print("Invalid password. Board contains tile 2048.")
+                            draw_error_message("Invalid Password!")
+                            # Return to Password Load screen to allow user to enter a new password
+                            current_state = STATE_PASSWORD_LOAD
+                            draw_password_load_screen()
+                        else:
+                            # Update the game grid
+                            grid = loaded_board.tolist()  # Convert numpy array to list
+                            # Update the score appropriately
+                            score = calculate_score_from_board(loaded_board)
+                            print("Board loaded from password.")
+                            # Transition back to game
+                            current_state = STATE_GAME
+                            draw_debug_grid()
                     except Exception as e:
                         print("Invalid password. Could not load board.")
-                        # Optionally, display an error message
-                        # For simplicity, return to main menu
+                        draw_error_message("Invalid Password!")
                         current_state = STATE_MAIN_MENU
                         draw_main_menu()
                     finally:
                         last_press_time = current_time
                 else:
                     print("Incomplete password. Please enter a 10-character password.")
-                    # Optionally, display an error message
+                    draw_error_message("Incomplete Password!")
                     last_press_time = current_time
-
-            # Handle Cancel (Pressing C again without confirming)
-            if not buttons['C'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
-                print("Password operation canceled.")
+                        
+            # Handle Cancel (Button B to return to Main Menu)
+            elif not buttons['B'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
+                print("Button B pressed: Returning to Main Menu from Password Input Screen.")
                 current_state = STATE_MAIN_MENU
                 draw_main_menu()
                 last_press_time = current_time
 
         elif current_state == STATE_PASSWORD_SAVE:
-            # In Password Save screen, only handle confirm and cancel
+            # In Password Save screen, handle confirm and cancel
             # Pressing C confirms the save
             if not buttons['C'].value and (current_time - last_press_time) > DEBOUNCE_TIME:
                 print("Password Save confirmed.")
@@ -913,6 +1014,7 @@ try:
                 current_state = STATE_GAME
                 draw_debug_grid()
                 last_press_time = current_time
+
 
         # Sleep to reduce CPU usage
         time.sleep(0.05)
