@@ -1,13 +1,13 @@
 # main.py
 
-import time
-import random
-from PIL import Image, ImageDraw, ImageFont
+import time # For sleep
+import random # For random tile generation
+from PIL import Image, ImageDraw, ImageFont # For drawing on the display
 import hardware_setup  # Import the hardware setup
 import os  # For high score persistence
-import traceback
+import traceback # For exception tracing
 from _pass import BoardEncoder  # Import BoardEncoder from _pass.py
-import numpy as np
+import numpy as np # For matrix operations
 import sys  # For exception tracing
 
 # Access hardware components from hardware_setup
