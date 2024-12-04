@@ -110,12 +110,17 @@ def save_high_score(new_high_score):
 high_score = load_high_score()
 
 # Initialize the game grid
+"""
 grid = [
     [0, 0, 0, 0],
     [0, 0, 0, 0],
     [0, 0, 0, 0],
     [0, 0, 0, 0]
 ]
+"""
+# Commented out the original grid. Because the new grid uses dict,tuple.
+
+# However, left for debugging purposes. 
 
 # Initialize the score
 score = 0
