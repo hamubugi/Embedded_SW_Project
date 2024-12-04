@@ -54,7 +54,7 @@ print(f"Grid Offsets - X: {offset_x}, Y: {offset_y}")
 BACKGROUND_COLOR = (0, 0, 0)  # Black background
 EMPTY_TILE_COLOR = (205, 193, 180)
 TILE_COLORS = {
-    0: EMPTY_TILE_COLOR,  # Empty tiles
+    0: EMPTY_TILE_COLOR,  # Empty tiles, colors based on the original game.
     2: (238, 228, 218),
     4: (237, 224, 200),
     8: (242, 177, 121),
@@ -68,7 +68,7 @@ TILE_COLORS = {
     2048: (237, 194, 46),
 }
 
-TEXT_COLOR = (119, 110, 101)
+TEXT_COLOR = (119, 110, 101) # Text colors. Also based on the original game
 FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FONT_SIZE = 24
 
